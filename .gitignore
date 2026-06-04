@@ -1,0 +1,10 @@
+secrets/
+.venv/
+__pycache__/
+*.pyc
+*.log
+diag_*.py
+probe_*.py
+test_*.py
+test_access.py
+test_meta.py
