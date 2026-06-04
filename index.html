@@ -114,6 +114,7 @@ const cls=r=>r==null?"":(r>=2?"g":r>=1?"y":"r");
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const fmtD=iso=>{const[y,m,d]=iso.split("-");return d+"/"+m};
 const addD=(iso,n)=>new Date(Date.parse(iso)+n*864e5).toISOString().slice(0,10);
+const todayLocal=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)}; // data reale di OGGI (fuso locale)
 let pFrom=null,pTo=null,prevOK=false;   // periodo precedente
 function setPrev(){
   const len=Math.round((Date.parse(to)-Date.parse(from))/864e5)+1;
@@ -449,12 +450,13 @@ const clampF=d=>d<DATA.da?DATA.da:d;
 dateBtn.onclick=e=>{e.stopPropagation();dateMenu.classList.toggle("open")};
 document.addEventListener("click",e=>{if(!dateMenu.contains(e.target)&&e.target!==dateBtn)dateMenu.classList.remove("open")});
 function applyPreset(p){
-  const mx=DATA.a;
+  const mx=todayLocal();                       // "oggi" = data reale di calendario, non l'ultimo giorno dei dati
+  const capT=d=>d>DATA.a?DATA.a:d;             // non mostrare giorni futuri/senza dati nelle finestre mobili
   if(p==="oggi"){from=mx;to=mx}
   else if(p==="ieri"){from=addD(mx,-1);to=from}
-  else if(p==="7"){from=clampF(addD(mx,-6));to=mx}
-  else if(p==="30"){from=clampF(addD(mx,-29));to=mx}
-  else if(p==="60"){from=DATA.da;to=mx}
+  else if(p==="7"){from=clampF(addD(mx,-6));to=capT(mx)}
+  else if(p==="30"){from=clampF(addD(mx,-29));to=capT(mx)}
+  else if(p==="60"){from=clampF(addD(mx,-59));to=capT(mx)}
   document.getElementById("from").value=from; document.getElementById("to").value=to;
   dateLabel.textContent=PNAME[p];
   document.querySelectorAll(".pbtn").forEach(b=>b.classList.toggle("on",b.dataset.p===p));
