@@ -122,7 +122,7 @@ function setPrev(){
 
 function sumCourses(list,f=from,t2=to){
   const inR=d=>d>=f&&d<=t2;
-  const t={spesa:0,spesa_google:0,lead_meta:0,lead_google:0,call:0,incassato:0,fatturato:0,chiusure:0,
+  const t={spesa:0,spesa_google:0,lead_meta:0,lead_google:0,lead_sito:0,call:0,incassato:0,fatturato:0,chiusure:0,
            inc_meta:0,inc_google:0,ch_meta:0,ch_google:0};
   for(const c of list) for(const s of c.serie) if(inR(s.data)) for(const k in t) t[k]+=(s[k]||0);
   t.spesa_meta=t.spesa;                 // serie.spesa = spesa Meta
@@ -355,7 +355,8 @@ function renderCourse(name){
       ${mc("Spesa",eur(t.spesa),delta(t.spesa,p.spesa,"neutral"))}
       ${mc("Fatturato generato",eur(t.fatturato),delta(t.fatturato,p.fatturato,"up"))}
       ${mc("Incassato effettivo",eur(t.incassato),delta(t.incassato,p.incassato,"up"))}
-      ${mc("Lead",N(t.lead),delta(t.lead,p.lead,"up"))}
+      ${mc("Lead Meta (modulo)",N(t.lead_meta),delta(t.lead_meta,p.lead_meta,"up"))}
+      ${mc("Lead sito",N(t.lead_sito)+(t.lead_google?` <small>${N(t.lead_google)} da Google</small>`:""),delta(t.lead_sito,p.lead_sito,"up"))}
       ${mc("Call fissate",N(t.call),delta(t.call,p.call,"up"))}
       ${mc("% fissaggio",pct(t.fissaggio)+' <small>call/lead</small>',delta(t.fissaggio,p.fissaggio,"up"))}
       ${mc("Costo / call fissata",eur2(t.cpcall),delta(t.cpcall,p.cpcall,"down"))}

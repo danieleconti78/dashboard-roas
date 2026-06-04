@@ -8,7 +8,7 @@ from courses import match_sheet_course
 from contacts import contact_keys
 from meta_spend import fetch_spend
 from leads import read_leads
-from google_leads import read_google_leads
+from site_leads import read_site
 from google_spend import read_google_spend
 from calendar_calls import read_calls
 
@@ -63,8 +63,9 @@ def build_all(span_days=30):
         spend_day[(course, dt.date.fromisoformat(date))] += s * SPEND_MULT
     closures, noads = read_closures()
     leads_day, lead_first = read_leads()               # lead Meta (+ contatti)
-    gleads_day, gtype, gfirst, gtypeday = read_google_leads()   # lead Google (Calcio) + tipo campagna
+    sito_day, gleads_day, gtype, gtypeday, gfirst = read_site()  # lead sito (organico+ads) + sottoinsieme Google (calcio+sportiva)
     gspend_day, _gun = read_google_spend()                       # spesa Google per (corso,tipo,giorno)
+    gspend_courses = {cc for (cc, _t, _d) in gspend_day}
     calls_day, _cun = read_calls(span_days + 5)                   # call fissate da calendario per (corso,giorno)
 
     dmax = max(d for (_, d) in spend_day)
@@ -79,7 +80,7 @@ def build_all(span_days=30):
         d = dmin
         while d <= dmax:
             days[d.isoformat()] = {"data": d.isoformat(), "spesa": 0.0, "spesa_google": 0.0, "lead_meta": 0,
-                                   "lead_google": 0, "call": 0, "incassato": 0.0, "fatturato": 0.0, "chiusure": 0,
+                                   "lead_google": 0, "lead_sito": 0, "call": 0, "incassato": 0.0, "fatturato": 0.0, "chiusure": 0,
                                    "inc_meta": 0.0, "inc_google": 0.0, "ch_meta": 0, "ch_google": 0}
             d += dt.timedelta(days=1)
         for (cc, dd), v in spend_day.items():
@@ -88,6 +89,8 @@ def build_all(span_days=30):
             if cc == c and inwin(dd): days[dd.isoformat()]["lead_meta"] = n
         for (cc, dd), n in gleads_day.items():
             if cc == c and inwin(dd): days[dd.isoformat()]["lead_google"] = n
+        for (cc, dd), n in sito_day.items():
+            if cc == c and inwin(dd): days[dd.isoformat()]["lead_sito"] = n
         for (cc, dd), n in calls_day.items():
             if cc == c and inwin(dd): days[dd.isoformat()]["call"] = n
         # lead Google per tipo campagna (Search/PMax/Demand Gen) nelle serie
@@ -134,7 +137,7 @@ def build_all(span_days=30):
         if not any(s["spesa"] or s["spesa_google"] or s["lead_meta"] or s["lead_google"] or s["incassato"] for s in serie):
             continue
         corsi.append({"corso": c, "account": ACCOUNT.get(c, "Sportiva"),
-                      "google_attivo": c in gtype, "serie": serie, "incub": incub})
+                      "google_attivo": (c in gtype) or (c in gspend_courses), "serie": serie, "incub": incub})
     # corsi SENZA ADS (solo incassi/chiusure, nessuna spesa/lead)
     no_tmp = {}
     def noday(course, di):
