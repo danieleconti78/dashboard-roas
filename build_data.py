@@ -142,7 +142,14 @@ def build_all(span_days=30):
         e["incassato"] = round(e["incassato"] + x["inc"], 2)
         e["fatturato"] = round(e["fatturato"] + x["fatt"], 2)
         e["chiusure"] += 1
-    corsi_noads = [{"corso": name, "serie": sorted(d.values(), key=lambda s: s["data"])}
+    def acc_noads(name):
+        n = name.lower()
+        cal = any(k in n for k in ["calcio", "futsal", "a 5", "a 11", "portieri", "settore giovanile",
+                                   "prima squadra", "recupero infortuni", "osservatore", "direttore",
+                                   "scuola calcio", "team leader", "agente sportivo", "telecronismo"])
+        return "Calcio" if cal else "Sportiva"
+    corsi_noads = [{"corso": name, "account": acc_noads(name),
+                    "serie": sorted(d.values(), key=lambda s: s["data"])}
                    for name, d in no_tmp.items()]
 
     return {"aggiornato": dmax.isoformat(), "da": dmin.isoformat(), "a": dmax.isoformat(),

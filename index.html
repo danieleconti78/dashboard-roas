@@ -80,9 +80,6 @@
   <div><h1>📊 Dashboard ROAS — Accademia Italiana</h1><div class="sub" id="updated"></div></div>
   <div class="controls">
     <select id="nav"></select>
-    <div class="seg" id="roasMode" title="Totale = tutto il fatturato del corso ÷ spesa · Matched = solo chiusure agganciate ai lead">
-      <button data-m="tot" class="on">Totale</button><button data-m="matched">Matched</button>
-    </div>
     <div class="ddwrap">
       <button id="dateBtn" class="datebtn">📅 <span id="dateLabel">Ultimi 30 giorni</span> ▾</button>
       <div id="dateMenu" class="datemenu">
@@ -106,7 +103,7 @@
 let DATA=null, view="__ov__", from=null, to=null, ch1=null, ch2=null, ovK="roas", ovDir=-1;
 let accOpen={alert:false, tot:true, cal:false, spo:false};   // stato tendine (BI chiusa di default)
 const TARGET_CPL=4;   // CPL target "tutto incluso"
-let roasMode="tot";   // "tot" (tutto il fatturato) | "matched" (solo chiusure agganciate)
+const roasMode="tot"; // overview sempre su base "totale" (il matched è solo nel dettaglio corso)
 const eur=n=>n==null?"—":"€"+Math.round(n).toLocaleString("it-IT");
 const eur2=n=>n==null?"—":"€"+n.toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2});
 const xx=n=>n==null?"—":n.toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2})+"x";
@@ -184,26 +181,38 @@ function render(){
   document.getElementById("updated").textContent=
     `Aggiornato al ${fmtD(DATA.aggiornato)} · intervallo ${fmtD(from)} – ${fmtD(to)}`
     + (prevOK?` · confronto vs ${fmtD(pFrom)}–${fmtD(pTo)}`:"")
-    + (DATA.spesa_mult&&DATA.spesa_mult!==1?` · spesa +${Math.round((DATA.spesa_mult-1)*100)}%`:"")
-    + ` · ROAS ${roasMode==="matched"?"Matched":"Totale"}`;
+    + (DATA.spesa_mult&&DATA.spesa_mult!==1?` · spesa +${Math.round((DATA.spesa_mult-1)*100)}%`:"");
   if(view==="__ov__") renderOverview(); else renderCourse(view);
 }
 
-function accBlock(title,color,list,key){
+function sumNoads(list,f=from,t2=to){   // corsi senza ads: solo incassi/fatturato/chiusure
+  const t={incassato:0,fatturato:0,chiusure:0};
+  for(const c of (list||[])) for(const s of c.serie) if(s.data>=f&&s.data<=t2){
+    t.incassato+=s.incassato; t.fatturato+=(s.fatturato||0); t.chiusure+=s.chiusure;}
+  return t;
+}
+function accBlock(title,color,list,key,noadsList){
   const t=sumCourses(list), p=sumCourses(list,pFrom,pTo), open=accOpen[key];
-  const sum=`<span class="accsum">ROAS <span class="pill ${cls(t.roas)}">${xx(t.roas)}</span> · ${eur(t.spesa)} spesa · ${eur(t.incassato)} incassato</span>`;
+  const n=sumNoads(noadsList), np=sumNoads(noadsList,pFrom,pTo);
+  // numeri TOTALI = corsi con ads + corsi senza ads (per combaciare col file)
+  const fatt=t.fatturato+n.fatturato, fattP=p.fatturato+np.fatturato;
+  const inc=t.incassato+n.incassato, incP=p.incassato+np.incassato;
+  const chi=t.chiusure+n.chiusure,   chiP=p.chiusure+np.chiusure;
+  const roas=t.spesa?inc/t.spesa:null, roasP=p.spesa?incP/p.spesa:null;
+  const cpa=chi?t.spesa/chi:null,      cpaP=chiP?p.spesa/chiP:null;
+  const sum=`<span class="accsum">ROAS <span class="pill ${cls(roas)}">${xx(roas)}</span> · ${eur(t.spesa)} spesa · ${eur(inc)} incassato</span>`;
   return `<div class="acc">
     <h2 class="acch${open?"":" closed"}" onclick='toggleAcc("${key}")'>
       <span class="chev">${open?"▾":"▸"}</span><span class="dot" style="background:${color}"></span>${title}${open?"":sum}
     </h2>
     ${open?`<div class="metrics">
       ${mc("Spesa pubblicitaria",eur(t.spesa),delta(t.spesa,p.spesa,"neutral"))}
-      ${mc("Fatturato generato",eur(t.fatturato),delta(t.fatturato,p.fatturato,"up"))}
-      ${mc("Incassato effettivo",eur(t.incassato),delta(t.incassato,p.incassato,"up"))}
+      ${mc("Fatturato generato",eur(fatt),delta(fatt,fattP,"up"))}
+      ${mc("Incassato effettivo",eur(inc),delta(inc,incP,"up"))}
       ${mc("Lead",N(t.lead)+(t.lead_google?` <small>(${N(t.lead_meta)} M · ${N(t.lead_google)} G)</small>`:""),delta(t.lead,p.lead,"up"))}
-      ${mc("Chiusure",t.chiusure,delta(t.chiusure,p.chiusure,"up"))}
-      ${mc("CPA (costo/acquisto)",eur2(t.cpa),delta(t.cpa,p.cpa,"down"))}
-      ${mc("ROAS",`<span class="pill ${cls(t.roas)}">${xx(t.roas)}</span>`,delta(t.roas,p.roas,"up"))}
+      ${mc("Chiusure (tutte)",chi+(n.chiusure?` <small>(${t.chiusure} ads · ${n.chiusure} no ads)</small>`:""),delta(chi,chiP,"up"))}
+      ${mc("CPA (costo/acquisto)",eur2(cpa),delta(cpa,cpaP,"down"))}
+      ${mc("ROAS",`<span class="pill ${cls(roas)}">${xx(roas)}</span>`,delta(roas,roasP,"up"))}
     </div>`:""}</div>`;
 }
 function toggleAcc(k){ accOpen[k]=!accOpen[k]; renderOverview(); }
@@ -255,10 +264,11 @@ function alertsCard(){
 
 function renderOverview(){
   const cal=DATA.corsi.filter(c=>c.account==="Calcio"), spo=DATA.corsi.filter(c=>c.account==="Sportiva");
+  const noAll=DATA.corsi_noads||[], noCal=noAll.filter(c=>c.account==="Calcio"), noSpo=noAll.filter(c=>c.account==="Sportiva");
   let html=alertsCard()
-          +accBlock("📊 Totale — Calcio + Sportiva",css('--accent'),DATA.corsi,"tot")
-          +accBlock("Accademia Italiana Calcio",css('--good'),cal,"cal")
-          +accBlock("Accademia Italiana Sportiva",css('--cal'),spo,"spo");
+          +accBlock("📊 Totale — Calcio + Sportiva",css('--accent'),DATA.corsi,"tot",noAll)
+          +accBlock("Accademia Italiana Calcio",css('--good'),cal,"cal",noCal)
+          +accBlock("Accademia Italiana Sportiva",css('--cal'),spo,"spo",noSpo);
   // tabella corsi per accademia
   const rows=DATA.corsi.map(c=>({c,m:sumCourses([c])}));
   rows.sort((a,b)=>{
@@ -386,11 +396,6 @@ function applyPreset(p){
   document.querySelectorAll(".pbtn").forEach(b=>b.classList.toggle("on",b.dataset.p===p));
   dateMenu.classList.remove("open"); render();
 }
-document.getElementById("roasMode").addEventListener("click",e=>{
-  if(!e.target.dataset.m)return; roasMode=e.target.dataset.m;
-  document.querySelectorAll("#roasMode button").forEach(b=>b.classList.toggle("on",b===e.target));
-  render();
-});
 document.querySelectorAll(".pbtn").forEach(b=>b.onclick=()=>applyPreset(b.dataset.p));
 document.getElementById("applyCustom").onclick=()=>{
   from=document.getElementById("from").value; to=document.getElementById("to").value;
