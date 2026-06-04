@@ -122,9 +122,9 @@ function setPrev(){
 
 function sumCourses(list,f=from,t2=to){
   const inR=d=>d>=f&&d<=t2;
-  const t={spesa:0,spesa_google:0,lead_meta:0,lead_google:0,incassato:0,fatturato:0,chiusure:0,
+  const t={spesa:0,spesa_google:0,lead_meta:0,lead_google:0,call:0,incassato:0,fatturato:0,chiusure:0,
            inc_meta:0,inc_google:0,ch_meta:0,ch_google:0};
-  for(const c of list) for(const s of c.serie) if(inR(s.data)) for(const k in t) t[k]+=s[k];
+  for(const c of list) for(const s of c.serie) if(inR(s.data)) for(const k in t) t[k]+=(s[k]||0);
   t.spesa_meta=t.spesa;                 // serie.spesa = spesa Meta
   t.spesa=t.spesa_meta+t.spesa_google;  // SPESA TOTALE (Meta + Google) da qui in poi
   t.lead=t.lead_meta+t.lead_google;
@@ -139,6 +139,8 @@ function sumCourses(list,f=from,t2=to){
   t.roas_fatt=t.spesa?t.fatturato/t.spesa:null;
   t.cpl=t.lead?t.spesa/t.lead:null;                  // CPL complessivo
   t.conversione=t.lead?t.chiusure/t.lead*100:null;
+  t.fissaggio=t.lead?t.call/t.lead*100:null;        // % call fissate sui lead
+  t.cra=t.call?t.chiusure/t.call*100:null;          // % chiusura sulle call (show-up→close)
   t.roas_meta=t.spesa_meta?t.inc_meta/t.spesa_meta:null;
   t.cpl_meta=t.lead_meta?t.spesa_meta/t.lead_meta:null;
   t.cpa_meta=t.ch_meta?t.spesa_meta/t.ch_meta:null;
@@ -185,10 +187,10 @@ function render(){
   if(view==="__ov__") renderOverview(); else renderCourse(view);
 }
 
-function sumNoads(list,f=from,t2=to){   // corsi senza ads: solo incassi/fatturato/chiusure
-  const t={incassato:0,fatturato:0,chiusure:0};
+function sumNoads(list,f=from,t2=to){   // corsi senza ads: incassi/fatturato/chiusure/call
+  const t={incassato:0,fatturato:0,chiusure:0,call:0};
   for(const c of (list||[])) for(const s of c.serie) if(s.data>=f&&s.data<=t2){
-    t.incassato+=s.incassato; t.fatturato+=(s.fatturato||0); t.chiusure+=s.chiusure;}
+    t.incassato+=s.incassato; t.fatturato+=(s.fatturato||0); t.chiusure+=s.chiusure; t.call+=(s.call||0);}
   return t;
 }
 function accBlock(title,color,list,key,noadsList){
@@ -198,6 +200,7 @@ function accBlock(title,color,list,key,noadsList){
   const fatt=t.fatturato+n.fatturato, fattP=p.fatturato+np.fatturato;
   const inc=t.incassato+n.incassato, incP=p.incassato+np.incassato;
   const chi=t.chiusure+n.chiusure,   chiP=p.chiusure+np.chiusure;
+  const call=t.call+n.call,          callP=p.call+np.call;
   const roas=t.spesa?inc/t.spesa:null, roasP=p.spesa?incP/p.spesa:null;
   const cpa=chi?t.spesa/chi:null,      cpaP=chiP?p.spesa/chiP:null;
   const sum=`<span class="accsum">ROAS <span class="pill ${cls(roas)}">${xx(roas)}</span> · ${eur(t.spesa)} spesa · ${eur(inc)} incassato</span>`;
@@ -210,6 +213,7 @@ function accBlock(title,color,list,key,noadsList){
       ${mc("Fatturato generato",eur(fatt),delta(fatt,fattP,"up"))}
       ${mc("Incassato effettivo",eur(inc),delta(inc,incP,"up"))}
       ${mc("Lead",N(t.lead)+(t.lead_google?` <small>(${N(t.lead_meta)} M · ${N(t.lead_google)} G)</small>`:""),delta(t.lead,p.lead,"up"))}
+      ${mc("Call fissate",N(call)+(t.lead?` <small>${Math.round(t.call/t.lead*100)}% fiss.</small>`:""),delta(call,callP,"up"))}
       ${mc("Chiusure (tutte)",chi+(n.chiusure?` <small>(${t.chiusure} ads · ${n.chiusure} no ads)</small>`:""),delta(chi,chiP,"up"))}
       ${mc("CPA (costo/acquisto)",eur2(cpa),delta(cpa,cpaP,"down"))}
       ${mc("ROAS",`<span class="pill ${cls(roas)}">${xx(roas)}</span>`,delta(roas,roasP,"up"))}
@@ -221,9 +225,9 @@ function toggleAcc(k){ accOpen[k]=!accOpen[k]; renderOverview(); }
 function computeAlerts(){
   const out=[];
   // mediana conversione tra i corsi (con volume) per individuare anomalie
-  const convArr=DATA.corsi.map(c=>sumCourses([c])).filter(m=>m.lead>=50&&m.conversione!=null)
-                 .map(m=>m.conversione).sort((a,b)=>a-b);
-  const medConv=convArr.length?convArr[Math.floor(convArr.length/2)]:null;
+  const ms=DATA.corsi.map(c=>sumCourses([c])).filter(m=>m.lead>=50);
+  const med=(arr)=>{const a=arr.filter(x=>x!=null).sort((x,y)=>x-y);return a.length?a[Math.floor(a.length/2)]:null;};
+  const medConv=med(ms.map(m=>m.conversione)), medFiss=med(ms.map(m=>m.fissaggio));
   for(const c of DATA.corsi){
     const m=sumCourses([c]), p=sumCourses([c],pFrom,pTo);
     if(m.spesa<50) continue;
@@ -237,6 +241,9 @@ function computeAlerts(){
     const cpl4=ld4?sp4/ld4:null;
     if(cpl4!=null && cpl4>TARGET_CPL*1.25 && sp4>=40)
       out.push({lvl:"warn",t:`<b>${c.corso}</b>: CPL ultimi 4gg €${cpl4.toFixed(2)} sopra il target €${TARGET_CPL} — valuta un refresh creativo.`});
+    // fissaggio basso: tanti lead ma poche call fissate (collo di bottiglia prenotazione)
+    if(medFiss && m.lead>=50 && m.fissaggio!=null && m.fissaggio<medFiss*0.6)
+      out.push({lvl:"warn",t:`<b>${c.corso}</b>: fissaggio ${pct(m.fissaggio)} (call/lead) sotto la media (${pct(medFiss)}) — tanti lead ma poche call prenotate, rivedi il processo di booking.`});
     // conversione anomala vs media corsi
     if(medConv && m.lead>=50 && m.conversione!=null){
       if(m.conversione<medConv*0.5)
@@ -278,21 +285,21 @@ function renderOverview(){
   const rowCls=r=>r==null?"":(r>=2?"rg":r>=1?"ry":"rr");
   const tr=({c,m})=>`<tr class="${rowCls(m.roas)}" onclick='go(${JSON.stringify(c.corso)})'>
       <td class="corso">${c.corso}<span class="badge">${c.account}</span>${c.google_attivo?'<span class="badge">+G</span>':''}</td>
-      <td>${eur(m.spesa)}</td><td>${eur2(m.cpl)}</td><td>${N(m.lead)}</td>
+      <td>${eur(m.spesa)}</td><td>${eur2(m.cpl)}</td><td>${N(m.lead)}</td><td>${N(m.call)}</td>
       <td>${m.chiusure}</td><td>${eur2(m.cpa)}</td><td>${eur(m.incassato)}</td>
       <td><span class="pill ${cls(m.roas)}">${xx(m.roas)}</span></td></tr>`;
   const th=(k,l)=>`<th data-k="${k}">${l}${ovK===k?(ovDir<0?" ▼":" ▲"):""}</th>`;
   // corsi SENZA ads (solo incassi) in fondo, separati
-  const noads=(DATA.corsi_noads||[]).map(c=>{let inc=0,ch=0;for(const s of c.serie)if(s.data>=from&&s.data<=to){inc+=s.incassato;ch+=s.chiusure}return{corso:c.corso,inc,ch};})
-                .filter(x=>x.inc||x.ch).sort((a,b)=>b.inc-a.inc);
-  const noTr=x=>`<tr style="opacity:.75"><td class="corso">${x.corso}<span class="badge">no ads</span></td><td class="mut">—</td><td class="mut">—</td><td class="mut">—</td><td>${x.ch}</td><td class="mut">—</td><td>${eur(x.inc)}</td><td class="mut">—</td></tr>`;
-  const noadsBlock=noads.length?`<tr class="grp"><td colspan="8">Corsi senza ADS — solo incassi (nessuna spesa)</td></tr>`+noads.map(noTr).join(""):"";
+  const noads=(DATA.corsi_noads||[]).map(c=>{let inc=0,ch=0,ca=0;for(const s of c.serie)if(s.data>=from&&s.data<=to){inc+=s.incassato;ch+=s.chiusure;ca+=(s.call||0)}return{corso:c.corso,inc,ch,ca};})
+                .filter(x=>x.inc||x.ch||x.ca).sort((a,b)=>b.inc-a.inc);
+  const noTr=x=>`<tr style="opacity:.75"><td class="corso">${x.corso}<span class="badge">no ads</span></td><td class="mut">—</td><td class="mut">—</td><td class="mut">—</td><td>${x.ca||"—"}</td><td>${x.ch}</td><td class="mut">—</td><td>${eur(x.inc)}</td><td class="mut">—</td></tr>`;
+  const noadsBlock=noads.length?`<tr class="grp"><td colspan="9">Corsi senza ADS — solo incassi (nessuna spesa)</td></tr>`+noads.map(noTr).join(""):"";
   const openC=accOpen.corsi;
   html+=`<div class="card">
     <h2 class="acch${openC?"":" closed"}" onclick='toggleAcc("corsi")' style="text-transform:none;font-weight:700;color:var(--txt);${openC?"":"margin-bottom:0"}">
       <span class="chev">${openC?"▾":"▸"}</span>Corsi — ordinati per ROAS <span class="mut" style="font-weight:400;font-size:12px">· clicca un corso · intestazioni per riordinare</span></h2>
     ${openC?`<div class="scroll"><table id="ovt"><thead><tr>
-      ${th("corso","Corso")}${th("spesa","Spesa")}${th("cpl","CPL")}${th("lead","Lead")}${th("chiusure","Chiusure")}${th("cpa","CPA")}${th("incassato","Incassato")}${th("roas","ROAS")}
+      ${th("corso","Corso")}${th("spesa","Spesa")}${th("cpl","CPL")}${th("lead","Lead")}${th("call","Call")}${th("chiusure","Chiusure")}${th("cpa","CPA")}${th("incassato","Incassato")}${th("roas","ROAS")}
     </tr></thead><tbody>${rows.map(tr).join("")}${noadsBlock}</tbody></table></div>`:""}</div>`;
   // Business Intelligence in fondo
   html+=alertsCard();
@@ -347,9 +354,12 @@ function renderCourse(name){
       ${mc("Fatturato generato",eur(t.fatturato),delta(t.fatturato,p.fatturato,"up"))}
       ${mc("Incassato effettivo",eur(t.incassato),delta(t.incassato,p.incassato,"up"))}
       ${mc("Lead",N(t.lead),delta(t.lead,p.lead,"up"))}
+      ${mc("Call fissate",N(t.call),delta(t.call,p.call,"up"))}
+      ${mc("% fissaggio",pct(t.fissaggio)+' <small>call/lead</small>',delta(t.fissaggio,p.fissaggio,"up"))}
       ${mc("Chiusure",t.chiusure,delta(t.chiusure,p.chiusure,"up"))}
+      ${mc("Conversione",pct(t.conversione)+' <small>chiusure/lead</small>',delta(t.conversione,p.conversione,"up"))}
+      ${mc("% chiusura su call",pct(t.cra)+' <small>chiusure/call</small>',delta(t.cra,p.cra,"up"))}
       ${mc("Costo / lead",eur2(t.cpl),delta(t.cpl,p.cpl,"down"))}
-      ${mc("Conversione",pct(t.conversione),delta(t.conversione,p.conversione,"up"))}
       ${mc("Incubazione (mediana)",gg(incub)+(fast!=null?` <small>${Math.round(fast)}% ≤7gg</small>`:""),delta(incub,pIncub,"down"))}
       <div class="m"><div class="lab">ROAS · totale / matched</div>
         <div style="display:flex;gap:18px;margin-top:7px">
