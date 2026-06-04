@@ -101,7 +101,7 @@
 
 <script>
 let DATA=null, view="__ov__", from=null, to=null, ch1=null, ch2=null, ovK="roas", ovDir=-1;
-let accOpen={alert:false, tot:true, cal:false, spo:false};   // stato tendine (BI chiusa di default)
+let accOpen={alert:false, tot:true, cal:false, spo:false, corsi:true};   // stato tendine
 const TARGET_CPL=4;   // CPL target "tutto incluso"
 const roasMode="tot"; // overview sempre su base "totale" (il matched è solo nel dettaglio corso)
 const eur=n=>n==null?"—":"€"+Math.round(n).toLocaleString("it-IT");
@@ -265,8 +265,7 @@ function alertsCard(){
 function renderOverview(){
   const cal=DATA.corsi.filter(c=>c.account==="Calcio"), spo=DATA.corsi.filter(c=>c.account==="Sportiva");
   const noAll=DATA.corsi_noads||[], noCal=noAll.filter(c=>c.account==="Calcio"), noSpo=noAll.filter(c=>c.account==="Sportiva");
-  let html=alertsCard()
-          +accBlock("📊 Totale — Calcio + Sportiva",css('--accent'),DATA.corsi,"tot",noAll)
+  let html=accBlock("📊 Totale — Calcio + Sportiva",css('--accent'),DATA.corsi,"tot",noAll)
           +accBlock("Accademia Italiana Calcio",css('--good'),cal,"cal",noCal)
           +accBlock("Accademia Italiana Sportiva",css('--cal'),spo,"spo",noSpo);
   // tabella corsi per accademia
@@ -288,12 +287,17 @@ function renderOverview(){
                 .filter(x=>x.inc||x.ch).sort((a,b)=>b.inc-a.inc);
   const noTr=x=>`<tr style="opacity:.75"><td class="corso">${x.corso}<span class="badge">no ads</span></td><td class="mut">—</td><td class="mut">—</td><td class="mut">—</td><td>${x.ch}</td><td class="mut">—</td><td>${eur(x.inc)}</td><td class="mut">—</td></tr>`;
   const noadsBlock=noads.length?`<tr class="grp"><td colspan="8">Corsi senza ADS — solo incassi (nessuna spesa)</td></tr>`+noads.map(noTr).join(""):"";
-  html+=`<div class="card"><h2>Corsi — ordinati per ROAS <span class="mut" style="text-transform:none;font-weight:400">· clicca un corso · clicca le intestazioni per riordinare</span></h2>
-    <div class="scroll"><table id="ovt"><thead><tr>
+  const openC=accOpen.corsi;
+  html+=`<div class="card">
+    <h2 class="acch${openC?"":" closed"}" onclick='toggleAcc("corsi")' style="text-transform:none;font-weight:700;color:var(--txt);${openC?"":"margin-bottom:0"}">
+      <span class="chev">${openC?"▾":"▸"}</span>Corsi — ordinati per ROAS <span class="mut" style="font-weight:400;font-size:12px">· clicca un corso · intestazioni per riordinare</span></h2>
+    ${openC?`<div class="scroll"><table id="ovt"><thead><tr>
       ${th("corso","Corso")}${th("spesa","Spesa")}${th("cpl","CPL")}${th("lead","Lead")}${th("chiusure","Chiusure")}${th("cpa","CPA")}${th("incassato","Incassato")}${th("roas","ROAS")}
-    </tr></thead><tbody>${rows.map(tr).join("")}${noadsBlock}</tbody></table></div></div>`;
+    </tr></thead><tbody>${rows.map(tr).join("")}${noadsBlock}</tbody></table></div>`:""}</div>`;
+  // Business Intelligence in fondo
+  html+=alertsCard();
   document.getElementById("main").innerHTML=html;
-  document.querySelectorAll("#ovt th").forEach(t=>t.onclick=()=>{const k=t.dataset.k; ovDir=(ovK===k)?-ovDir:-1; ovK=k; renderOverview();});
+  if(openC) document.querySelectorAll("#ovt th").forEach(t=>t.onclick=()=>{const k=t.dataset.k; ovDir=(ovK===k)?-ovDir:-1; ovK=k; renderOverview();});
 }
 
 function gcampOf(c){
