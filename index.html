@@ -277,6 +277,11 @@ function renderOverview(){
   let html=accBlock("📊 Totale — Calcio + Sportiva",css('--accent'),DATA.corsi,"tot",noAll)
           +accBlock("Accademia Italiana Calcio",css('--good'),cal,"cal",noCal)
           +accBlock("Accademia Italiana Sportiva",css('--cal'),spo,"spo",noSpo);
+  // grafico semplice: spesa vs incassato del periodo selezionato (Calcio + Sportiva)
+  html+=`<div class="card">
+    <h2 style="text-transform:none;font-weight:700;color:var(--txt)">Spesa vs Incassato
+      <span class="mut" style="font-weight:400;font-size:12px">· periodo selezionato · Calcio + Sportiva</span></h2>
+    <div class="chartbox"><canvas id="ovChart"></canvas></div></div>`;
   // tabella corsi per accademia
   const rows=DATA.corsi.map(c=>({c,m:sumCourses([c])}));
   rows.sort((a,b)=>{
@@ -306,7 +311,22 @@ function renderOverview(){
   // Business Intelligence in fondo
   html+=alertsCard();
   document.getElementById("main").innerHTML=html;
+  drawOverviewChart();
   if(openC) document.querySelectorAll("#ovt th").forEach(t=>t.onclick=()=>{const k=t.dataset.k; ovDir=(ovK===k)?-ovDir:-1; ovK=k; renderOverview();});
+}
+
+function drawOverviewChart(){
+  const el=document.getElementById("ovChart"); if(!el) return;
+  const t=sumCourses(DATA.corsi), n=sumNoads(DATA.corsi_noads||[]);
+  const spesa=t.spesa, inc=t.incassato+n.incassato;     // incassato = corsi con ads + senza ads (come nel riquadro Totale)
+  if(ch2) ch2.destroy();
+  ch2=new Chart(el,{type:"bar",
+    data:{labels:["Spesa","Incassato"],datasets:[{data:[spesa,inc],
+      backgroundColor:[css('--bad'),css('--good')],borderRadius:8,maxBarThickness:140}]},
+    options:{maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>eur(c.parsed.y)}}},
+      scales:{x:{ticks:{color:css('--mut'),font:{size:14}},grid:{display:false}},
+        y:{beginAtZero:true,ticks:{color:css('--mut'),callback:v=>v>=1000?"€"+(v/1000).toFixed(0)+"k":"€"+v},grid:{color:css('--line')}}}}});
 }
 
 function gcampOf(c){
