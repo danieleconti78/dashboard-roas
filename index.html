@@ -219,7 +219,11 @@ function accBlock(title,color,list,key,noadsList){
       ${mc("Chiusure (tutte)",chi+(n.chiusure?` <small>(${t.chiusure} ads · ${n.chiusure} no ads)</small>`:""),delta(chi,chiP,"up"))}
       ${mc("CPA (costo/acquisto)",eur2(cpa),delta(cpa,cpaP,"down"))}
       ${mc("ROAS",`<span class="pill ${cls(roas)}">${xx(roas)}</span>`,delta(roas,roasP,"up"))}
-    </div>`:""}</div>`;
+    </div>${key==="tot"?`
+      <div style="margin-top:14px">
+        <div class="mut" style="font-size:12px;margin-bottom:6px">Spesa vs Incassato · periodo selezionato</div>
+        <div class="chartbox" style="height:240px"><canvas id="ovChart"></canvas></div>
+      </div>`:""}`:""}</div>`;
 }
 function toggleAcc(k){ accOpen[k]=!accOpen[k]; renderOverview(); }
 
@@ -277,11 +281,6 @@ function renderOverview(){
   let html=accBlock("📊 Totale — Calcio + Sportiva",css('--accent'),DATA.corsi,"tot",noAll)
           +accBlock("Accademia Italiana Calcio",css('--good'),cal,"cal",noCal)
           +accBlock("Accademia Italiana Sportiva",css('--cal'),spo,"spo",noSpo);
-  // grafico semplice: spesa vs incassato del periodo selezionato (Calcio + Sportiva)
-  html+=`<div class="card">
-    <h2 style="text-transform:none;font-weight:700;color:var(--txt)">Spesa vs Incassato
-      <span class="mut" style="font-weight:400;font-size:12px">· periodo selezionato · Calcio + Sportiva</span></h2>
-    <div class="chartbox"><canvas id="ovChart"></canvas></div></div>`;
   // tabella corsi per accademia
   const rows=DATA.corsi.map(c=>({c,m:sumCourses([c])}));
   rows.sort((a,b)=>{
