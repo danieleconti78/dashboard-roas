@@ -122,8 +122,8 @@ function setPrev(){
 
 function sumCourses(list,f=from,t2=to){
   const inR=d=>d>=f&&d<=t2;
-  const t={spesa:0,spesa_google:0,lead_meta:0,lead_google:0,lead_sito:0,call:0,incassato:0,fatturato:0,chiusure:0,
-           inc_meta:0,inc_google:0,ch_meta:0,ch_google:0};
+  const t={spesa:0,spesa_google:0,lead_meta:0,lead_google:0,lead_seo:0,call:0,incassato:0,fatturato:0,chiusure:0,
+           inc_meta:0,inc_google:0,inc_seo:0,ch_meta:0,ch_google:0,ch_seo:0};
   for(const c of list) for(const s of c.serie) if(inR(s.data)) for(const k in t) t[k]+=(s[k]||0);
   t.spesa_meta=t.spesa;                 // serie.spesa = spesa Meta
   t.spesa=t.spesa_meta+t.spesa_google;  // SPESA TOTALE (Meta + Google) da qui in poi
@@ -148,8 +148,8 @@ function sumCourses(list,f=from,t2=to){
   t.roas_google=t.spesa_google?t.inc_google/t.spesa_google:null;
   t.cpl_google=t.lead_google?t.spesa_google/t.lead_google:null;
   t.cpa_google=t.ch_google?t.spesa_google/t.ch_google:null;
-  t.inc_diretta=t.incassato-t.inc_meta-t.inc_google;
-  t.ch_diretta=t.chiusure-t.ch_meta-t.ch_google;
+  t.inc_diretta=t.incassato-t.inc_meta-t.inc_google-t.inc_seo;   // né ads né SEO: non ricondotte a nessun lead
+  t.ch_diretta=t.chiusure-t.ch_meta-t.ch_google-t.ch_seo;
   return t;
 }
 function incubOf(list,f=from,t2=to){   // MEDIANA (più robusta della media su distribuzione asimmetrica)
@@ -341,12 +341,38 @@ function renderCourse(name){
         <div class="row"><span class="mut">CPA</span><b>${eur2(t.cpa_google)}</b></div>
         <div class="row"><span class="mut">Incassato</span><b>${eur(t.inc_google)}</b></div>
         <div class="row"><span class="mut">ROAS</span><b><span class="pill ${cls(t.roas_google)}">${xx(t.roas_google)}</span></b></div></div>
+      <div class="plat"><h3 style="color:#7a8a99">● SEO / organico</h3>
+        <div class="row"><span class="mut">Spesa</span><b>€0 <small>nessun ad</small></b></div>
+        <div class="row"><span class="mut">Lead</span><b>${N(t.lead_seo)}</b></div>
+        <div class="row"><span class="mut">Costo / lead</span><b>—</b></div>
+        <div class="row"><span class="mut">Chiusure</span><b>${t.ch_seo}</b></div>
+        <div class="row"><span class="mut">CPA</span><b>—</b></div>
+        <div class="row"><span class="mut">Incassato</span><b>${eur(t.inc_seo)}</b></div>
+        <div class="row"><span class="mut">ROAS</span><b><span class="pill ok">∞</span></b></div></div>
     </div>
     <h2 style="margin:20px 0 12px">Campagne Google per tipo</h2>
     <div class="scroll"><table><thead><tr><th>Campagna</th><th>Spesa</th><th>Lead</th><th>Chiusure</th><th>Incassato</th><th>ROAS</th></tr></thead>
       <tbody>${gcRows||'<tr><td colspan="6" class="mut">Nessun dato Google nel periodo</td></tr>'}</tbody></table></div>
-    <div class="note">Spesa Google da Google Ads (×${DATA.spesa_mult}); chiusure/incassato attribuiti incrociando email·telefono·nome coi lead. Diretta/organico (non ricondotte a nessun lead): <b>${t.ch_diretta}</b> chiusure · ${eur(t.inc_diretta)}.</div></div>`
-    :`<div class="card"><h2>Confronto piattaforme</h2><div class="note">Google non attivo per questo corso: 100% Meta.</div></div>`;
+    <div class="note">Spesa Google da Google Ads (×${DATA.spesa_mult}); chiusure/incassato attribuiti incrociando email·telefono·nome coi lead. Lead Google = dall'UTM della campagna; SEO/organico = dalla colonna CORSO del foglio sito (lead senza UTM). Diretta (chiusure non ricondotte a nessun lead): <b>${t.ch_diretta}</b> chiusure · ${eur(t.inc_diretta)}.</div></div>`
+    :`<div class="card"><h2>Confronto piattaforme — Meta vs SEO/organico</h2><div class="cmp">
+      <div class="plat"><h3 class="meta-c">● Meta</h3>
+        <div class="row"><span class="mut">Spesa</span><b>${eur(t.spesa_meta)}</b></div>
+        <div class="row"><span class="mut">Lead</span><b>${N(t.lead_meta)}</b></div>
+        <div class="row"><span class="mut">Costo / lead</span><b>${eur2(t.cpl_meta)}</b></div>
+        <div class="row"><span class="mut">Chiusure</span><b>${t.ch_meta}</b></div>
+        <div class="row"><span class="mut">CPA</span><b>${eur2(t.cpa_meta)}</b></div>
+        <div class="row"><span class="mut">Incassato</span><b>${eur(t.inc_meta)}</b></div>
+        <div class="row"><span class="mut">ROAS</span><b><span class="pill ${cls(t.roas_meta)}">${xx(t.roas_meta)}</span></b></div></div>
+      <div class="plat"><h3 style="color:#7a8a99">● SEO / organico</h3>
+        <div class="row"><span class="mut">Spesa</span><b>€0 <small>nessun ad</small></b></div>
+        <div class="row"><span class="mut">Lead</span><b>${N(t.lead_seo)}</b></div>
+        <div class="row"><span class="mut">Costo / lead</span><b>—</b></div>
+        <div class="row"><span class="mut">Chiusure</span><b>${t.ch_seo}</b></div>
+        <div class="row"><span class="mut">CPA</span><b>—</b></div>
+        <div class="row"><span class="mut">Incassato</span><b>${eur(t.inc_seo)}</b></div>
+        <div class="row"><span class="mut">ROAS</span><b><span class="pill ok">∞</span></b></div></div>
+    </div>
+    <div class="note">Google non attivo per questo corso. Lead SEO/organico presi dalla colonna CORSO del foglio sito (lead senza UTM). Diretta (chiusure non ricondotte a nessun lead): <b>${t.ch_diretta}</b> chiusure · ${eur(t.inc_diretta)}.</div></div>`;
   document.getElementById("main").innerHTML=`
     <button class="back" onclick='go("__ov__")'>← Tutti i corsi</button>
     <h1 style="margin:0 0 2px">${c.corso} <span class="badge">${c.account}</span></h1>
@@ -356,7 +382,8 @@ function renderCourse(name){
       ${mc("Fatturato generato",eur(t.fatturato),delta(t.fatturato,p.fatturato,"up"))}
       ${mc("Incassato effettivo",eur(t.incassato),delta(t.incassato,p.incassato,"up"))}
       ${mc("Lead Meta (modulo)",N(t.lead_meta),delta(t.lead_meta,p.lead_meta,"up"))}
-      ${mc("Lead sito",N(t.lead_sito)+(t.lead_google?` <small>${N(t.lead_google)} da Google</small>`:""),delta(t.lead_sito,p.lead_sito,"up"))}
+      ${mc("Lead Google (UTM)",N(t.lead_google),delta(t.lead_google,p.lead_google,"up"))}
+      ${mc("Lead SEO / organico",N(t.lead_seo)+' <small>da colonna corso</small>',delta(t.lead_seo,p.lead_seo,"up"))}
       ${mc("Call fissate",N(t.call),delta(t.call,p.call,"up"))}
       ${mc("% fissaggio",pct(t.fissaggio)+' <small>call/lead</small>',delta(t.fissaggio,p.fissaggio,"up"))}
       ${mc("Costo / call fissata",eur2(t.cpcall),delta(t.cpcall,p.cpcall,"down"))}

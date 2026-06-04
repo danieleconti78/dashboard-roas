@@ -63,7 +63,7 @@ def build_all(span_days=30):
         spend_day[(course, dt.date.fromisoformat(date))] += s * SPEND_MULT
     closures, noads = read_closures()
     leads_day, lead_first = read_leads()               # lead Meta (+ contatti)
-    sito_day, gleads_day, gtype, gtypeday, gfirst = read_site()  # lead sito (organico+ads) + sottoinsieme Google (calcio+sportiva)
+    gleads_day, gtype, gtypeday, gfirst, seo_day, seofirst = read_site()  # Google (per UTM) + SEO/organico (per col CORSO)
     gspend_day, _gun = read_google_spend()                       # spesa Google per (corso,tipo,giorno)
     gspend_courses = {cc for (cc, _t, _d) in gspend_day}
     calls_day, _cun = read_calls(span_days + 5)                   # call fissate da calendario per (corso,giorno)
@@ -80,8 +80,8 @@ def build_all(span_days=30):
         d = dmin
         while d <= dmax:
             days[d.isoformat()] = {"data": d.isoformat(), "spesa": 0.0, "spesa_google": 0.0, "lead_meta": 0,
-                                   "lead_google": 0, "lead_sito": 0, "call": 0, "incassato": 0.0, "fatturato": 0.0, "chiusure": 0,
-                                   "inc_meta": 0.0, "inc_google": 0.0, "ch_meta": 0, "ch_google": 0}
+                                   "lead_google": 0, "lead_seo": 0, "call": 0, "incassato": 0.0, "fatturato": 0.0, "chiusure": 0,
+                                   "inc_meta": 0.0, "inc_google": 0.0, "inc_seo": 0.0, "ch_meta": 0, "ch_google": 0, "ch_seo": 0}
             d += dt.timedelta(days=1)
         for (cc, dd), v in spend_day.items():
             if cc == c and inwin(dd): days[dd.isoformat()]["spesa"] = round(v, 2)
@@ -89,8 +89,8 @@ def build_all(span_days=30):
             if cc == c and inwin(dd): days[dd.isoformat()]["lead_meta"] = n
         for (cc, dd), n in gleads_day.items():
             if cc == c and inwin(dd): days[dd.isoformat()]["lead_google"] = n
-        for (cc, dd), n in sito_day.items():
-            if cc == c and inwin(dd): days[dd.isoformat()]["lead_sito"] = n
+        for (cc, dd), n in seo_day.items():
+            if cc == c and inwin(dd): days[dd.isoformat()]["lead_seo"] = n
         for (cc, dd), n in calls_day.items():
             if cc == c and inwin(dd): days[dd.isoformat()]["call"] = n
         # lead Google per tipo campagna (Search/PMax/Demand Gen) nelle serie
@@ -107,6 +107,7 @@ def build_all(span_days=30):
                 gc["spesa"] = round(gc["spesa"] + v * SPEND_MULT, 2)
         mfm = lead_first.get(c, {})        # contatti lead Meta
         gfm = gfirst.get(c, {})            # contatti lead Google -> (data, tipo)
+        sfm = seofirst.get(c, {})          # contatti lead SEO/organico -> data
         incub = []
         for x in closures:
             if x["course"] != c or not inwin(x["d"]):
@@ -115,20 +116,21 @@ def build_all(span_days=30):
             day["incassato"] = round(day["incassato"] + x["inc"], 2)
             day["fatturato"] = round(day["fatturato"] + x["fatt"], 2)
             day["chiusure"] += 1
-            # attribuzione piattaforma via match contatto (email/telefono/nome), first-touch
+            # attribuzione canale via match contatto (email/telefono/nome), first-touch tra Meta/Google/SEO
             md = min([mfm[k] for k in x["keys"] if k in mfm], default=None)
             gmatch = [gfm[k] for k in x["keys"] if k in gfm]
             gd = min((m[0] for m in gmatch), default=None)
             gtp = next((m[1] for m in gmatch if m[0] == gd), None) if gd else None
-            if md and gd:   plat = "meta" if md <= gd else "google"
-            elif md:        plat = "meta"
-            elif gd:        plat = "google"
-            else:           plat = None    # diretta/organica
+            sd = min([sfm[k] for k in x["keys"] if k in sfm], default=None)
+            opts = {}
+            if md: opts["meta"] = md
+            if gd: opts["google"] = gd
+            if sd: opts["seo"] = sd
+            plat = min(opts, key=opts.get) if opts else None     # canale del first-touch
             if plat:
                 day["inc_" + plat] = round(day["inc_" + plat] + x["inc"], 2)
                 day["ch_" + plat] += 1
-                ld = md if plat == "meta" else gd
-                gg = (x["d"] - ld).days
+                gg = (x["d"] - opts[plat]).days
                 if 0 <= gg <= 400: incub.append({"data": x["d"].isoformat(), "gg": gg})
                 if plat == "google" and gtp:   # chiusura/incasso al tipo campagna Google
                     gc = day.setdefault("gcamp", {}).setdefault(gtp, {"lead": 0, "inc": 0.0, "ch": 0, "spesa": 0.0})
