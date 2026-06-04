@@ -237,6 +237,12 @@ function computeAlerts(){
   const medConv=med(ms.map(m=>m.conversione)), medFiss=med(ms.map(m=>m.fissaggio));
   for(const c of DATA.corsi){
     const m=sumCourses([c]), p=sumCourses([c],pFrom,pTo);
+    // CONGRUENZA LEAD (ogni 24h): lead Meta da API vs lead arrivati nel foglio — segnala i persi nell'integrazione
+    if(c.lc_api>=50){
+      const miss=c.lc_api-(c.lc_sheet||0), pmiss=miss/c.lc_api*100;
+      if(pmiss>=10 && miss>=20)
+        out.push({lvl:"bad",t:`<b>${c.corso}</b>: ${c.lc_api} lead su Meta ma solo ${c.lc_sheet} nel foglio (60gg) — <b>${miss} lead persi nell'integrazione (${Math.round(pmiss)}%)</b>. Esporta i lead da Meta e recuperali.`});
+    }
     if(m.spesa<50) continue;
     if(m.roas!=null && m.roas<1)
       out.push({lvl:"bad",t:`<b>${c.corso}</b>: ROAS ${xx(m.roas)} — in perdita (CPA ${eur2(m.cpa)}). Rivedi target/creatività o riduci budget.`});

@@ -8,6 +8,7 @@ from courses import match_sheet_course
 from contacts import contact_keys
 from meta_spend import fetch_spend
 from leads import read_leads
+from meta_leads import fetch_lead_counts
 from site_leads import read_site
 from google_spend import read_google_spend
 from calendar_calls import read_calls
@@ -63,6 +64,10 @@ def build_all(span_days=30):
         spend_day[(course, dt.date.fromisoformat(date))] += s * SPEND_MULT
     closures, noads = read_closures()
     leads_day, lead_first = read_leads()               # lead Meta (+ contatti)
+    try:
+        meta_lead_api = fetch_lead_counts(span_days)   # conteggio lead Meta da API (controllo congruenza foglio)
+    except Exception as e:
+        print("  (controllo lead Meta saltato:", str(e)[:70], ")"); meta_lead_api = {}
     gleads_day, gtype, gtypeday, gfirst, seo_day, seofirst = read_site()  # Google (per UTM) + SEO/organico (per col CORSO)
     gspend_day, _gun = read_google_spend()                       # spesa Google per (corso,tipo,giorno)
     gspend_courses = {cc for (cc, _t, _d) in gspend_day}
@@ -139,7 +144,9 @@ def build_all(span_days=30):
         if not any(s["spesa"] or s["spesa_google"] or s["lead_meta"] or s["lead_google"] or s["incassato"] for s in serie):
             continue
         corsi.append({"corso": c, "account": ACCOUNT.get(c, "Sportiva"),
-                      "google_attivo": (c in gtype) or (c in gspend_courses), "serie": serie, "incub": incub})
+                      "google_attivo": (c in gtype) or (c in gspend_courses), "serie": serie, "incub": incub,
+                      "lc_api": meta_lead_api.get(c, 0),                       # lead Meta da API (verità)
+                      "lc_sheet": sum(s["lead_meta"] for s in serie)})         # lead Meta arrivati nel foglio
     # corsi SENZA ADS (solo incassi/chiusure, nessuna spesa/lead)
     no_tmp = {}
     def noday(course, di):
