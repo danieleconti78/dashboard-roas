@@ -42,11 +42,18 @@ def get_all(path, params):
 
 
 import datetime as dt
+try:
+    from zoneinfo import ZoneInfo
+    def today_it():
+        return dt.datetime.now(ZoneInfo("Europe/Rome")).date()   # OGGI sul calendario italiano (non UTC del server)
+except Exception:
+    def today_it():
+        return dt.date.today()
 
 
 def _chunks(span_days, chunk=30):
     """Finestre di max 30gg (Meta rifiuta ad-level giornaliero su periodi lunghi)."""
-    until = dt.date.today() - dt.timedelta(days=1)      # come 'last_Nd' (esclude oggi)
+    until = today_it() - dt.timedelta(days=1)            # come 'last_Nd' (esclude oggi, calendario IT)
     since = until - dt.timedelta(days=span_days - 1)
     out, s = [], since
     while s <= until:
