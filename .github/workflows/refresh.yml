@@ -1,5 +1,7 @@
 name: refresh
 on:
+  push:
+    branches: [main]           # ogni volta che mando il codice -> il sito si ripubblica DA SOLO
   schedule:
     - cron: '30 4 * * *'      # ~06:30 ora italiana (estate). GitHub può ritardare di qualche minuto.
   workflow_dispatch:           # esecuzione manuale dal sito GitHub
