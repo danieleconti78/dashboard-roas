@@ -8,9 +8,10 @@ from contacts import contact_keys
 AIC = "1ZQbXj_h8UPW_T00C2oYt9bLr7etzL0gteUNQ-XEIitQ"
 # token nel utm_campaign -> corso canonico
 UTM2COURSE = [
-    ("analyst", "Match Analyst a 11"), ("osservatore", "Osservatore"),
-    ("direttore", "Direttore Sportivo"), ("portieri", "Portieri"),
-    ("istruttore_scuola_calcio", "Istruttore Scuola Calcio"),
+    ("analyst", "Match Analyst a 11"), ("match", "Match Analyst a 11"),
+    ("osservatore", "Osservatore"), ("direttore", "Direttore Sportivo"),
+    ("portieri", "Portieri"), ("istruttore_scuola_calcio", "Istruttore Scuola Calcio"),
+    ("scuola_calcio", "Istruttore Scuola Calcio"), ("mental", "Mental Coach"),
 ]
 
 def _date(s):
@@ -39,7 +40,7 @@ def read_google_leads():
     for r in rows:
         d = _date(r[0]) if len(r) > 0 else None
         utm = (r[10].strip().lower() if len(r) > 10 and r[10] else "")
-        if d is None or not utm.startswith("g_ads_"):
+        if d is None or not ("g_ads" in utm or "gads" in utm):   # Google: g_ads_* o *_gads (es. pmax_match_gads)
             continue
         tipo = _tipo(utm)
         course = next((c for tok, c in UTM2COURSE if tok in utm), None)

@@ -45,7 +45,7 @@ def read_closures():
         num = lambda i: float(g(i)) if isinstance(g(i), (int, float)) else 0.0
         corso = str(g(42) or "").strip()           # AQ = GESTIONE SALDI/Corso
         inc, fatt = num(45), num(17)                # AT = Incassato, R = PREZZO
-        if not corso or (inc == 0 and fatt == 0):
+        if not corso or inc == 0:                    # chiusura = solo se PAGATA (incassato>0)
             continue
         canon = match_sheet_course(corso)
         if canon is None:                           # corso senza ADS (solo incassi)
