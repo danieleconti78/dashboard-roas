@@ -8,3 +8,6 @@ probe_*.py
 test_*.py
 test_access.py
 test_meta.py
+data.json
+data.enc
+analysis/

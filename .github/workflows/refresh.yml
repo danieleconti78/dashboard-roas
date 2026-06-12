@@ -33,11 +33,13 @@ jobs:
           printf '%s' "$META_TOKEN" > secrets/meta_token.txt
           printf '%s' "$GOOGLE_KEY" > secrets/key.json
       - name: Genera data.json
+        env:
+          DASH_PASSWORD: ${{ secrets.DASH_PASSWORD }}
         run: python build_data.py
       - name: Prepara sito
         run: |
           mkdir -p _site
-          cp index.html data.json _site/
+          cp index.html data.enc _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

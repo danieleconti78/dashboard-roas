@@ -477,11 +477,59 @@ document.getElementById("applyCustom").onclick=()=>{
   dateMenu.classList.remove("open"); render();
 };
 
-fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.json()).then(d=>{
+// ---- accesso con password: i dati sono cifrati (AES-GCM), la chiave deriva dalla password ----
+const b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function deriveKey(pw,salt){
+  const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:150000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},true,["decrypt"]);
+}
+async function tryDecrypt(env,key){
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(env.iv)},key,b64d(env.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+function startDash(d){
   DATA=d;
   for(const id of ["from","to"]){const el=document.getElementById(id);el.min=d.da;el.max=d.a}
   buildNav(); applyPreset("30");   // default: ultimi 30 giorni
-}).catch(()=>document.getElementById("main").innerHTML="<div class='card'>Impossibile caricare data.json. Avvia il server e ricarica.</div>");
+}
+function showGate(env,msg){
+  document.getElementById("main").innerHTML=`
+    <div class="card" style="max-width:380px;margin:60px auto;text-align:center">
+      <h2 style="text-transform:none;color:var(--txt)">🔒 Area riservata</h2>
+      <p class="mut" style="font-size:13px">Inserisci la password per vedere la dashboard.</p>
+      <input id="pw" type="password" placeholder="Password" style="width:90%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font-size:15px" autofocus>
+      <div id="pwerr" style="color:#e24b4a;font-size:12px;min-height:18px;margin:6px 0">${msg||""}</div>
+      <button id="pwgo" style="padding:10px 26px;border-radius:8px;border:0;background:var(--accent);color:#fff;font-size:14px;cursor:pointer">Entra</button>
+    </div>`;
+  const go=async()=>{
+    const pw=document.getElementById("pw").value;
+    if(!pw)return;
+    document.getElementById("pwerr").textContent="…";
+    try{
+      const key=await deriveKey(pw,b64d(env.salt));
+      const d=await tryDecrypt(env,key);
+      const raw=await crypto.subtle.exportKey("raw",key);
+      localStorage.setItem("dashkey",btoa(String.fromCharCode(...new Uint8Array(raw))));
+      localStorage.setItem("dashsalt",env.salt);
+      startDash(d);
+    }catch(e){document.getElementById("pwerr").textContent="Password errata, riprova."}
+  };
+  document.getElementById("pwgo").onclick=go;
+  document.getElementById("pw").addEventListener("keydown",e=>{if(e.key==="Enter")go()});
+}
+fetch("data.enc?t="+Date.now(),{cache:"no-store"}).then(r=>r.json()).then(async env=>{
+  const saved=localStorage.getItem("dashkey");
+  if(saved&&localStorage.getItem("dashsalt")===env.salt){
+    try{
+      const key=await crypto.subtle.importKey("raw",b64d(saved),{name:"AES-GCM"},true,["decrypt"]);
+      return startDash(await tryDecrypt(env,key));
+    }catch(e){}
+  }
+  if(saved){   // salt cambiato (nuovo build): riprova ricavando la chiave? no: la chiave dipende dal salt -> richiedi password
+    localStorage.removeItem("dashkey"); localStorage.removeItem("dashsalt");
+  }
+  showGate(env);
+}).catch(()=>document.getElementById("main").innerHTML="<div class='card'>Impossibile caricare i dati. Riprova tra qualche minuto.</div>");
 </script>
 </body>
 </html>

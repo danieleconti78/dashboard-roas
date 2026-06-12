@@ -178,9 +178,35 @@ def build_all(span_days=30):
             "spesa_non_attribuita": round(sum(unattr.values()) * SPEND_MULT, 2)}
 
 
+def encrypt_data(data, out="data.enc"):
+    """Cifra il dataset con la password della dashboard (AES-256-GCM, chiave da PBKDF2).
+    Password: env DASH_PASSWORD (cloud) o secrets/dash_password.txt (locale)."""
+    import os, base64
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    pw = os.environ.get("DASH_PASSWORD", "").strip()
+    if not pw:
+        try:
+            pw = open("secrets/dash_password.txt").read().strip()
+        except FileNotFoundError:
+            pass
+    if not pw:
+        raise RuntimeError("DASH_PASSWORD mancante: imposta il secret su GitHub o secrets/dash_password.txt")
+    import hashlib
+    salt = hashlib.sha256(b"AIC-AIS-dashboard-salt-v1").digest()[:16]   # fisso: la chiave salvata nel browser resta valida tra i build giornalieri
+    iv = os.urandom(12)
+    key = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=150000).derive(pw.encode())
+    ct = AESGCM(key).encrypt(iv, json.dumps(data, ensure_ascii=False).encode(), None)
+    b64 = lambda b: base64.b64encode(b).decode()
+    json.dump({"salt": b64(salt), "iv": b64(iv), "ct": b64(ct)}, open(out, "w"))
+    print(f"Generato {out} (dataset cifrato)")
+
+
 if __name__ == "__main__":
     data = build_all(60)   # 60gg: serve storico per il confronto col periodo precedente
-    json.dump(data, open("data.json", "w"), ensure_ascii=False, indent=2)
+    json.dump(data, open("data.json", "w"), ensure_ascii=False, indent=2)   # solo locale (gitignored), per debug
+    encrypt_data(data)
     print(f"Generato data.json — span {data['da']} → {data['a']}, {len(data['corsi'])} corsi")
     for acc in ("Calcio", "Sportiva"):
         cs = [c for c in data["corsi"] if c["account"] == acc]
