@@ -32,10 +32,15 @@ jobs:
           mkdir -p secrets
           printf '%s' "$META_TOKEN" > secrets/meta_token.txt
           printf '%s' "$GOOGLE_KEY" > secrets/key.json
-      - name: Genera data.json
+      - name: Genera dati (cifrati)
         env:
           DASH_PASSWORD: ${{ secrets.DASH_PASSWORD }}
-        run: python build_data.py
+        run: |
+          if [ -z "$DASH_PASSWORD" ]; then
+            echo "::warning::Secret DASH_PASSWORD mancante: pubblico il data.enc committato (dati non aggiornati). Aggiungi il secret per riattivare il refresh giornaliero."
+          else
+            python build_data.py
+          fi
       - name: Prepara sito
         run: |
           mkdir -p _site
