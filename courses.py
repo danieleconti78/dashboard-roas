@@ -15,8 +15,8 @@ RULES = {
         ("Match Analyst Pallavolo",   r"\bvolley\b"),
         ("Mental Coach",              r"\bmental\b"),
         ("Istruttore Running",        r"\brunning\b"),
-        ("Pilates Matwork",           r"\bmat\b"),
-        ("Pilates Reformer",          r"\bref\b"),
+        ("Pilates Matwork",           r"\b(mat|matwork)\b"),       # 'mat' abbreviato o 'matwork' per esteso
+        ("Pilates Reformer",          r"\b(ref|reformer)\b"),      # 'ref' abbreviato o 'reformer' per esteso
     ],
 }
 
