@@ -86,7 +86,8 @@ def build_all(span_days=30):
         while d <= dmax:
             days[d.isoformat()] = {"data": d.isoformat(), "spesa": 0.0, "spesa_google": 0.0, "lead_meta": 0,
                                    "lead_google": 0, "lead_seo": 0, "call": 0, "incassato": 0.0, "fatturato": 0.0, "chiusure": 0,
-                                   "inc_meta": 0.0, "inc_google": 0.0, "inc_seo": 0.0, "ch_meta": 0, "ch_google": 0, "ch_seo": 0}
+                                   "inc_meta": 0.0, "inc_google": 0.0, "inc_seo": 0.0, "ch_meta": 0, "ch_google": 0, "ch_seo": 0,
+                                   "fatt_meta": 0.0, "fatt_google": 0.0, "fatt_seo": 0.0}
             d += dt.timedelta(days=1)
         for (cc, dd), v in spend_day.items():
             if cc == c and inwin(dd): days[dd.isoformat()]["spesa"] = round(v, 2)
@@ -134,6 +135,7 @@ def build_all(span_days=30):
             plat = min(opts, key=opts.get) if opts else None     # canale del first-touch
             if plat:
                 day["inc_" + plat] = round(day["inc_" + plat] + x["inc"], 2)
+                day["fatt_" + plat] = round(day["fatt_" + plat] + x["fatt"], 2)
                 day["ch_" + plat] += 1
                 gg = (x["d"] - opts[plat]).days
                 if 0 <= gg <= 400: incub.append({"data": x["d"].isoformat(), "gg": gg})

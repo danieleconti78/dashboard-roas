@@ -100,7 +100,7 @@
 <main id="main"></main>
 
 <script>
-let DATA=null, view="__ov__", from=null, to=null, ch1=null, ch2=null, ovK="roas", ovDir=-1;
+let DATA=null, view="__ov__", from=null, to=null, ch1=null, ch2=null, ovK="roas_inc", ovDir=-1;
 let accOpen={alert:false, tot:true, cal:false, spo:false, corsi:true};   // stato tendine
 const TARGET_CPL=4;   // CPL target "tutto incluso"
 const roasMode="tot"; // overview sempre su base "totale" (il matched è solo nel dettaglio corso)
@@ -124,7 +124,8 @@ function setPrev(){
 function sumCourses(list,f=from,t2=to){
   const inR=d=>d>=f&&d<=t2;
   const t={spesa:0,spesa_google:0,lead_meta:0,lead_google:0,lead_seo:0,call:0,incassato:0,fatturato:0,chiusure:0,
-           inc_meta:0,inc_google:0,inc_seo:0,ch_meta:0,ch_google:0,ch_seo:0};
+           inc_meta:0,inc_google:0,inc_seo:0,ch_meta:0,ch_google:0,ch_seo:0,
+           fatt_meta:0,fatt_google:0,fatt_seo:0};
   for(const c of list) for(const s of c.serie) if(inR(s.data)) for(const k in t) t[k]+=(s[k]||0);
   t.spesa_meta=t.spesa;                 // serie.spesa = spesa Meta
   t.spesa=t.spesa_meta+t.spesa_google;  // SPESA TOTALE (Meta + Google) da qui in poi
@@ -143,10 +144,13 @@ function sumCourses(list,f=from,t2=to){
   t.fissaggio=t.lead?t.call/t.lead*100:null;        // % call fissate sui lead
   t.cra=t.call?t.chiusure/t.call*100:null;          // % chiusura sulle call (show-up→close)
   t.cpcall=t.call?t.spesa/t.call:null;              // costo per call fissata
+  t.roas_inc=t.roas_tot;                              // alias esplicito: ROAS incassato (incassato/spesa)
   t.roas_meta=t.spesa_meta?t.inc_meta/t.spesa_meta:null;
+  t.roasf_meta=t.spesa_meta?t.fatt_meta/t.spesa_meta:null;     // ROAS fatturato canale Meta
   t.cpl_meta=t.lead_meta?t.spesa_meta/t.lead_meta:null;
   t.cpa_meta=t.ch_meta?t.spesa_meta/t.ch_meta:null;
   t.roas_google=t.spesa_google?t.inc_google/t.spesa_google:null;
+  t.roasf_google=t.spesa_google?t.fatt_google/t.spesa_google:null;
   t.cpl_google=t.lead_google?t.spesa_google/t.lead_google:null;
   t.cpa_google=t.ch_google?t.spesa_google/t.ch_google:null;
   t.inc_diretta=t.incassato-t.inc_meta-t.inc_google-t.inc_seo;   // né ads né SEO: non ricondotte a nessun lead
@@ -204,8 +208,9 @@ function accBlock(title,color,list,key,noadsList){
   const chi=t.chiusure+n.chiusure,   chiP=p.chiusure+np.chiusure;
   const call=t.call+n.call,          callP=p.call+np.call;
   const roas=t.spesa?inc/t.spesa:null, roasP=p.spesa?incP/p.spesa:null;
+  const roasF=t.spesa?fatt/t.spesa:null, roasFP=p.spesa?fattP/p.spesa:null;   // ROAS fatturato (generato dalle ads)
   const cpa=chi?t.spesa/chi:null,      cpaP=chiP?p.spesa/chiP:null;
-  const sum=`<span class="accsum">ROAS <span class="pill ${cls(roas)}">${xx(roas)}</span> · ${eur(t.spesa)} spesa · ${eur(inc)} incassato</span>`;
+  const sum=`<span class="accsum">ROAS fatt. <span class="pill ${cls(roasF)}">${xx(roasF)}</span> · ROAS inc. <span class="pill ${cls(roas)}">${xx(roas)}</span> · ${eur(t.spesa)} spesa</span>`;
   return `<div class="acc">
     <h2 class="acch${open?"":" closed"}" onclick='toggleAcc("${key}")'>
       <span class="chev">${open?"▾":"▸"}</span><span class="dot" style="background:${color}"></span>${title}${open?"":sum}
@@ -219,7 +224,8 @@ function accBlock(title,color,list,key,noadsList){
       ${mc("Costo / call",eur2(t.call?t.spesa/t.call:null),delta(t.call?t.spesa/t.call:null,p.call?p.spesa/p.call:null,"down"))}
       ${mc("Chiusure (tutte)",chi+(n.chiusure?` <small>(${t.chiusure} ads · ${n.chiusure} no ads)</small>`:""),delta(chi,chiP,"up"))}
       ${mc("CPA (costo/acquisto)",eur2(cpa),delta(cpa,cpaP,"down"))}
-      ${mc("ROAS",`<span class="pill ${cls(roas)}">${xx(roas)}</span>`,delta(roas,roasP,"up"))}
+      ${mc("ROAS fatturato",`<span class="pill ${cls(roasF)}">${xx(roasF)}</span> <small>fatturato/spesa</small>`,delta(roasF,roasFP,"up"))}
+      ${mc("ROAS incassato",`<span class="pill ${cls(roas)}">${xx(roas)}</span> <small>incassato/spesa</small>`,delta(roas,roasP,"up"))}
     </div>${key==="tot"?`
       <div style="margin-top:14px">
         <div class="mut" style="font-size:12px;margin-bottom:6px">Spesa vs Incassato · periodo selezionato</div>
@@ -300,19 +306,20 @@ function renderOverview(){
       <td class="corso">${c.corso}<span class="badge">${c.account}</span>${c.google_attivo?'<span class="badge">+G</span>':''}</td>
       <td>${eur(m.spesa)}</td><td>${eur2(m.cpl)}</td><td>${N(m.lead)}</td><td>${N(m.call)}</td><td>${eur2(m.cpcall)}</td>
       <td>${m.chiusure}</td><td>${eur2(m.cpa)}</td><td>${eur(m.incassato)}</td>
-      <td><span class="pill ${cls(m.roas)}">${xx(m.roas)}</span></td></tr>`;
+      <td><span class="pill ${cls(m.roas_fatt)}">${xx(m.roas_fatt)}</span></td>
+      <td><span class="pill ${cls(m.roas_inc)}">${xx(m.roas_inc)}</span></td></tr>`;
   const th=(k,l)=>`<th data-k="${k}">${l}${ovK===k?(ovDir<0?" ▼":" ▲"):""}</th>`;
   // corsi SENZA ads (solo incassi) in fondo, separati
   const noads=(DATA.corsi_noads||[]).map(c=>{let inc=0,ch=0,ca=0;for(const s of c.serie)if(s.data>=from&&s.data<=to){inc+=s.incassato;ch+=s.chiusure;ca+=(s.call||0)}return{corso:c.corso,inc,ch,ca};})
                 .filter(x=>x.inc||x.ch||x.ca).sort((a,b)=>b.inc-a.inc);
-  const noTr=x=>`<tr style="opacity:.75"><td class="corso">${x.corso}<span class="badge">no ads</span></td><td class="mut">—</td><td class="mut">—</td><td class="mut">—</td><td>${x.ca||"—"}</td><td class="mut">—</td><td>${x.ch}</td><td class="mut">—</td><td>${eur(x.inc)}</td><td class="mut">—</td></tr>`;
-  const noadsBlock=noads.length?`<tr class="grp"><td colspan="10">Corsi senza ADS — solo incassi (nessuna spesa)</td></tr>`+noads.map(noTr).join(""):"";
+  const noTr=x=>`<tr style="opacity:.75"><td class="corso">${x.corso}<span class="badge">no ads</span></td><td class="mut">—</td><td class="mut">—</td><td class="mut">—</td><td>${x.ca||"—"}</td><td class="mut">—</td><td>${x.ch}</td><td class="mut">—</td><td>${eur(x.inc)}</td><td class="mut">—</td><td class="mut">—</td></tr>`;
+  const noadsBlock=noads.length?`<tr class="grp"><td colspan="11">Corsi senza ADS — solo incassi (nessuna spesa)</td></tr>`+noads.map(noTr).join(""):"";
   const openC=accOpen.corsi;
   html+=`<div class="card">
     <h2 class="acch${openC?"":" closed"}" onclick='toggleAcc("corsi")' style="text-transform:none;font-weight:700;color:var(--txt);${openC?"":"margin-bottom:0"}">
       <span class="chev">${openC?"▾":"▸"}</span>Corsi — ordinati per ROAS <span class="mut" style="font-weight:400;font-size:12px">· clicca un corso · intestazioni per riordinare</span></h2>
     ${openC?`<div class="scroll"><table id="ovt"><thead><tr>
-      ${th("corso","Corso")}${th("spesa","Spesa")}${th("cpl","CPL")}${th("lead","Lead")}${th("call","Call")}${th("cpcall","C/Call")}${th("chiusure","Chiusure")}${th("cpa","CPA")}${th("incassato","Incassato")}${th("roas","ROAS")}
+      ${th("corso","Corso")}${th("spesa","Spesa")}${th("cpl","CPL")}${th("lead","Lead")}${th("call","Call")}${th("cpcall","C/Call")}${th("chiusure","Chiusure")}${th("cpa","CPA")}${th("incassato","Incassato")}${th("roas_fatt","ROAS fatt.")}${th("roas_inc","ROAS inc.")}
     </tr></thead><tbody>${rows.map(tr).join("")}${noadsBlock}</tbody></table></div>`:""}</div>`;
   // Business Intelligence in fondo
   html+=alertsCard();
@@ -358,7 +365,8 @@ function renderCourse(name){
         <div class="row"><span class="mut">Chiusure</span><b>${t.ch_meta}</b></div>
         <div class="row"><span class="mut">CPA</span><b>${eur2(t.cpa_meta)}</b></div>
         <div class="row"><span class="mut">Incassato</span><b>${eur(t.inc_meta)}</b></div>
-        <div class="row"><span class="mut">ROAS</span><b><span class="pill ${cls(t.roas_meta)}">${xx(t.roas_meta)}</span></b></div></div>
+        <div class="row"><span class="mut">ROAS fatt.</span><b><span class="pill ${cls(t.roasf_meta)}">${xx(t.roasf_meta)}</span></b></div>
+        <div class="row"><span class="mut">ROAS inc.</span><b><span class="pill ${cls(t.roas_meta)}">${xx(t.roas_meta)}</span></b></div></div>
       <div class="plat"><h3 class="goog-c">● Google</h3>
         <div class="row"><span class="mut">Spesa</span><b>${eur(t.spesa_google)}</b></div>
         <div class="row"><span class="mut">Lead</span><b>${N(t.lead_google)}</b></div>
@@ -366,7 +374,8 @@ function renderCourse(name){
         <div class="row"><span class="mut">Chiusure</span><b>${t.ch_google}</b></div>
         <div class="row"><span class="mut">CPA</span><b>${eur2(t.cpa_google)}</b></div>
         <div class="row"><span class="mut">Incassato</span><b>${eur(t.inc_google)}</b></div>
-        <div class="row"><span class="mut">ROAS</span><b><span class="pill ${cls(t.roas_google)}">${xx(t.roas_google)}</span></b></div></div>
+        <div class="row"><span class="mut">ROAS fatt.</span><b><span class="pill ${cls(t.roasf_google)}">${xx(t.roasf_google)}</span></b></div>
+        <div class="row"><span class="mut">ROAS inc.</span><b><span class="pill ${cls(t.roas_google)}">${xx(t.roas_google)}</span></b></div></div>
       <div class="plat"><h3 style="color:#7a8a99">● SEO / organico</h3>
         <div class="row"><span class="mut">Spesa</span><b>€0 <small>nessun ad</small></b></div>
         <div class="row"><span class="mut">Lead</span><b>${N(t.lead_seo)}</b></div>
@@ -377,7 +386,7 @@ function renderCourse(name){
         <div class="row"><span class="mut">ROAS</span><b><span class="pill ok">∞</span></b></div></div>
     </div>
     <h2 style="margin:20px 0 12px">Campagne Google per tipo</h2>
-    <div class="scroll"><table><thead><tr><th>Campagna</th><th>Spesa</th><th>Lead</th><th>Chiusure</th><th>Incassato</th><th>ROAS</th></tr></thead>
+    <div class="scroll"><table><thead><tr><th>Campagna</th><th>Spesa</th><th>Lead</th><th>Chiusure</th><th>Incassato</th><th>ROAS inc.</th></tr></thead>
       <tbody>${gcRows||'<tr><td colspan="6" class="mut">Nessun dato Google nel periodo</td></tr>'}</tbody></table></div>
     <div class="note">Spesa Google da Google Ads (×${DATA.spesa_mult}); chiusure/incassato attribuiti incrociando email·telefono·nome coi lead. Lead Google = dall'UTM della campagna; SEO/organico = dalla colonna CORSO del foglio sito (lead senza UTM). Diretta (chiusure non ricondotte a nessun lead): <b>${t.ch_diretta}</b> chiusure · ${eur(t.inc_diretta)}.</div></div>`
     :`<div class="card"><h2>Confronto piattaforme — Meta vs SEO/organico</h2><div class="cmp">
@@ -388,7 +397,8 @@ function renderCourse(name){
         <div class="row"><span class="mut">Chiusure</span><b>${t.ch_meta}</b></div>
         <div class="row"><span class="mut">CPA</span><b>${eur2(t.cpa_meta)}</b></div>
         <div class="row"><span class="mut">Incassato</span><b>${eur(t.inc_meta)}</b></div>
-        <div class="row"><span class="mut">ROAS</span><b><span class="pill ${cls(t.roas_meta)}">${xx(t.roas_meta)}</span></b></div></div>
+        <div class="row"><span class="mut">ROAS fatt.</span><b><span class="pill ${cls(t.roasf_meta)}">${xx(t.roasf_meta)}</span></b></div>
+        <div class="row"><span class="mut">ROAS inc.</span><b><span class="pill ${cls(t.roas_meta)}">${xx(t.roas_meta)}</span></b></div></div>
       <div class="plat"><h3 style="color:#7a8a99">● SEO / organico</h3>
         <div class="row"><span class="mut">Spesa</span><b>€0 <small>nessun ad</small></b></div>
         <div class="row"><span class="mut">Lead</span><b>${N(t.lead_seo)}</b></div>
@@ -418,9 +428,10 @@ function renderCourse(name){
       ${mc("% chiusura su call",pct(t.cra)+' <small>chiusure/call</small>',delta(t.cra,p.cra,"up"))}
       ${mc("Costo / lead",eur2(t.cpl),delta(t.cpl,p.cpl,"down"))}
       ${mc("Incubazione (mediana)",gg(incub)+(fast!=null?` <small>${Math.round(fast)}% ≤7gg</small>`:""),delta(incub,pIncub,"down"))}
-      <div class="m"><div class="lab">ROAS · totale / matched</div>
-        <div style="display:flex;gap:18px;margin-top:7px">
-          <div><span class="pill ${cls(t.roas_tot)}">${xx(t.roas_tot)}</span><div class="mut" style="font-size:10px;margin-top:4px">totale</div></div>
+      <div class="m"><div class="lab">ROAS · fatturato / incassato / matched</div>
+        <div style="display:flex;gap:14px;margin-top:7px">
+          <div><span class="pill ${cls(t.roas_fatt)}">${xx(t.roas_fatt)}</span><div class="mut" style="font-size:10px;margin-top:4px">fatturato</div></div>
+          <div><span class="pill ${cls(t.roas_inc)}">${xx(t.roas_inc)}</span><div class="mut" style="font-size:10px;margin-top:4px">incassato</div></div>
           <div><span class="pill ${cls(t.roas_matched)}">${xx(t.roas_matched)}</span><div class="mut" style="font-size:10px;margin-top:4px">matched</div></div>
         </div></div>
       <div class="m"><div class="lab">CPA · totale / matched</div>
