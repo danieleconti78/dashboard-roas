@@ -17,9 +17,10 @@ TABS = {
           "Istruttore_SC": "Istruttore Scuola Calcio"},
     AIS: {"Match_Volley": "Match Analyst Pallavolo", "Match_Basket": "Match Analyst Basket",
           "Mental_Coach": "Mental Coach", "Pilates_Mat": "Pilates Matwork",
-          "Pilates_Ref": "Pilates Reformer", "Istr_Running": "Istruttore Running"},
-    PRES: {"OFF_REF_PRES": "Pilates Reformer presenza",   # tab presenza attivi (i vecchi sono fermi)
-           "mat_pres_TO": "Pilates Matwork presenza"},
+          "Pilates_Ref": "Pilates Reformer", "Istr_Running": "Istruttore Running",
+          "Pres_Ref_MI": "Reformer presenza Milano",    # presenza Milano
+          "Pres_Mat_TO": "Reformer presenza Torino"},   # presenza Torino
+    PRES: {"OFF_REF_PRES": "Reformer presenza Prato"},   # presenza Prato (il grosso del volume)
 }
 
 
@@ -71,6 +72,8 @@ def read_leads():
                 name = r[12] if len(r) > 12 else None
                 email = r[13] if len(r) > 13 else None
                 phone = r[14] if len(r) > 14 else None
+                if "test@meta" in str(email or "") or "<test" in str(name or ""):
+                    continue                         # scarta i lead di test di Meta
                 leads_day[(course, d)] += 1
                 fm = lead_first[course]
                 for k in contact_keys(email, phone, name):

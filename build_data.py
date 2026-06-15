@@ -4,7 +4,7 @@ import json, datetime as dt
 from collections import defaultdict
 from google.oauth2 import service_account
 from googleapiclient.discovery import build as gbuild
-from courses import match_sheet_course
+from courses import match_sheet_course, city_of, presenza_course
 from contacts import contact_keys
 from meta_spend import fetch_spend
 from leads import read_leads
@@ -49,6 +49,9 @@ def read_closures():
         if not corso or inc == 0:                    # chiusura = solo se PAGATA (incassato>0)
             continue
         canon = match_sheet_course(corso)
+        if canon in ("Pilates Reformer presenza", "Pilates Matwork presenza"):   # presenza -> spacca per citta (col K MODALITA')
+            city = city_of(g(10)) or city_of(corso)
+            canon = presenza_course(city) if city else canon
         if canon is None:                           # corso senza ADS (solo incassi)
             noads.append({"course": corso, "d": parse_date(g(41)), "inc": inc, "fatt": fatt})
             continue

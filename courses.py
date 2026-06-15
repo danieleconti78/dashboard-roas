@@ -15,12 +15,28 @@ RULES = {
         ("Match Analyst Pallavolo",   r"\bvolley\b"),
         ("Mental Coach",              r"\bmental\b"),
         ("Istruttore Running",        r"\brunning\b"),
-        ("Pilates Matwork presenza",  r"(?=.*\bmat\b)(?=.*\bpres\b)"),
-        ("Pilates Reformer presenza", r"(?=.*\bref\b)(?=.*\bpres\b)"),
         ("Pilates Matwork",           r"\bmat\b"),
         ("Pilates Reformer",          r"\bref\b"),
     ],
 }
+
+PRESENZA_CITIES = ("Prato", "Torino", "Milano")
+
+
+def presenza_course(city: str):
+    return f"Reformer presenza {city}"
+
+
+def city_of(text: str):
+    """Estrae la citta in presenza da MODALITA'/corso (es. 'Presenza PRATO' -> 'Prato')."""
+    n = _norm(text)
+    if "milano" in n or "mlano" in n:
+        return "Milano"
+    if "torino" in n:
+        return "Torino"
+    if "prato" in n:
+        return "Prato"
+    return None
 
 
 def _norm(s: str) -> str:
@@ -33,12 +49,17 @@ def _norm(s: str) -> str:
 
 
 def match_course(account: str, *names: str):
-    """Prova ogni nome in ordine (ad_name, poi adset_name). Ritorna corso o None."""
+    """Prova ogni nome in ordine (ad_name, poi adset_name). Ritorna corso o None.
+    Eccezione SPORTIVA: i corsi in PRESENZA (token citta su ad o adset) hanno priorita' assoluta,
+    perche' l'ad puo' chiamarsi solo 'ref_pres' mentre la citta sta nell'adset (Prato_/Torino_/Mlano_)."""
+    norms = [_norm(n) for n in names if n]
+    if account == "SPORTIVA":
+        for n in norms:
+            c = city_of(n)
+            if c:
+                return presenza_course(c)
     rules = RULES.get(account, [])
-    for name in names:
-        n = _norm(name)
-        if not n:
-            continue
+    for n in norms:
         for course, pat in rules:
             if re.search(pat, n):
                 return course
