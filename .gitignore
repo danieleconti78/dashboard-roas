@@ -10,3 +10,4 @@ test_access.py
 test_meta.py
 data.json
 analysis/
+daily_push.sh
