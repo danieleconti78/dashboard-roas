@@ -33,7 +33,8 @@ def parse_date(v):
 
 
 def read_closures():
-    """Formazione26 A:AU -> chiusure {course, d(iscr), inc(AT), fatt(R/PREZZO), keys}."""
+    """Formazione26 A:AU -> deal {course, d(iscr), inc(AO), fatt(R/PREZZO), paid, keys}.
+    Fatturato generato = col R (PREZZO, anche firmate non saldate); Incassato effettivo = col AO."""
     creds = service_account.Credentials.from_service_account_file(
         "secrets/key.json", scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
     svc = gbuild("sheets", "v4", credentials=creds, cache_discovery=False)
@@ -45,17 +46,18 @@ def read_closures():
         g = lambda i: r[i] if len(r) > i else None
         num = lambda i: float(g(i)) if isinstance(g(i), (int, float)) else 0.0
         corso = str(g(42) or "").strip()           # AQ = GESTIONE SALDI/Corso
-        inc, fatt = num(45), num(17)                # AT = Incassato, R = PREZZO
-        if not corso or inc == 0:                    # chiusura = solo se PAGATA (incassato>0)
+        fatt, inc = num(17), num(40)                # R = PREZZO (fatturato), AO = Incassato effettivo
+        if not corso or (fatt <= 0 and inc <= 0):   # riga vuota / non un deal reale
             continue
+        paid = inc > 0                              # chiusura "pagata" se ha incassato; firmata-non-pagata altrimenti
         canon = match_sheet_course(corso)
         if canon in ("Pilates Reformer presenza", "Pilates Matwork presenza"):   # presenza -> spacca per citta (col K MODALITA')
             city = city_of(g(10)) or city_of(corso)
             canon = presenza_course(city) if city else canon
         if canon is None:                           # corso senza ADS (solo incassi)
-            noads.append({"course": corso, "d": parse_date(g(41)), "inc": inc, "fatt": fatt})
+            noads.append({"course": corso, "d": parse_date(g(41)), "inc": inc, "fatt": fatt, "paid": paid})
             continue
-        out.append({"course": canon, "d": parse_date(g(41)), "inc": inc, "fatt": fatt,
+        out.append({"course": canon, "d": parse_date(g(41)), "inc": inc, "fatt": fatt, "paid": paid,
                     "keys": contact_keys(g(8), g(6), f"{g(1) or ''} {g(2) or ''}")})
     return out, noads
 
@@ -122,9 +124,9 @@ def build_all(span_days=30):
             if x["course"] != c or not inwin(x["d"]):
                 continue
             day = days[x["d"].isoformat()]
-            day["incassato"] = round(day["incassato"] + x["inc"], 2)
-            day["fatturato"] = round(day["fatturato"] + x["fatt"], 2)
-            day["chiusure"] += 1
+            day["incassato"] = round(day["incassato"] + x["inc"], 2)   # AO (anche parziale)
+            day["fatturato"] = round(day["fatturato"] + x["fatt"], 2)  # R (anche firmate non saldate)
+            if x["paid"]: day["chiusure"] += 1                          # chiusura contata = pagata (AO>0)
             # attribuzione canale via match contatto (email/telefono/nome), first-touch tra Meta/Google/SEO
             md = min([mfm[k] for k in x["keys"] if k in mfm], default=None)
             gmatch = [gfm[k] for k in x["keys"] if k in gfm]
@@ -139,14 +141,15 @@ def build_all(span_days=30):
             if plat:
                 day["inc_" + plat] = round(day["inc_" + plat] + x["inc"], 2)
                 day["fatt_" + plat] = round(day["fatt_" + plat] + x["fatt"], 2)
-                day["ch_" + plat] += 1
+                if x["paid"]: day["ch_" + plat] += 1
                 gg = (x["d"] - opts[plat]).days
-                if 0 <= gg <= 400: incub.append({"data": x["d"].isoformat(), "gg": gg})
+                if x["paid"] and 0 <= gg <= 400: incub.append({"data": x["d"].isoformat(), "gg": gg})
                 if plat == "google" and gtp:   # chiusura/incasso al tipo campagna Google
                     gc = day.setdefault("gcamp", {}).setdefault(gtp, {"lead": 0, "inc": 0.0, "ch": 0, "spesa": 0.0})
-                    gc["inc"] = round(gc["inc"] + x["inc"], 2); gc["ch"] += 1
+                    gc["inc"] = round(gc["inc"] + x["inc"], 2)
+                    if x["paid"]: gc["ch"] += 1
         serie = list(days.values())
-        if not any(s["spesa"] or s["spesa_google"] or s["lead_meta"] or s["lead_google"] or s["incassato"] for s in serie):
+        if not any(s["spesa"] or s["spesa_google"] or s["lead_meta"] or s["lead_google"] or s["incassato"] or s["fatturato"] for s in serie):
             continue
         corsi.append({"corso": c, "account": ACCOUNT.get(c, "Sportiva"),
                       "google_attivo": (c in gtype) or (c in gspend_courses), "serie": serie, "incub": incub,
@@ -163,7 +166,7 @@ def build_all(span_days=30):
         e = noday(x["course"], x["d"].isoformat())
         e["incassato"] = round(e["incassato"] + x["inc"], 2)
         e["fatturato"] = round(e["fatturato"] + x["fatt"], 2)
-        e["chiusure"] += 1
+        if x["paid"]: e["chiusure"] += 1
     adv_names = {c["corso"] for c in corsi}
     for (cc, dd), n in calls_day.items():   # call dei corsi senza ads
         if cc not in adv_names and inwin(dd):
