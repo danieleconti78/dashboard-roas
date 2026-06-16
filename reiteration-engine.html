@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reiteration Engine — Format Iterator</title>
+<style>
+  :root{
+    --bg:#0d0e11; --panel:#15171c; --panel-2:#1b1e25; --line:#272b34;
+    --txt:#e7e9ee; --muted:#8b919e; --muted-2:#5f6571;
+    --accent:#ff7a18; --accent-2:#ffb347; --accent-soft:rgba(255,122,24,.12);
+    --green:#3ecf8e; --green-soft:rgba(62,207,142,.12);
+    --violet:#a98bff; --violet-soft:rgba(169,139,255,.14);
+    --radius:14px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent-2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:28px 20px 120px}
+
+  /* header */
+  header{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#1a0e02;flex:none}
+  h1{font-size:21px;margin:0;letter-spacing:-.3px}
+  .sub{color:var(--muted);font-size:13.5px;margin:2px 0 0}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+
+  .banner{margin:18px 0 0;padding:12px 14px;border-radius:10px;font-size:13px;border:1px solid var(--line);background:var(--panel)}
+  .banner.warn{border-color:#5a4a1f;background:#211b0d;color:#ffd98a}
+  .banner.ok{border-color:#234a36;background:#0f201a;color:var(--green)}
+
+  /* sections */
+  .step{margin-top:26px}
+  .step-h{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+  .step-n{width:24px;height:24px;border-radius:7px;background:var(--accent-soft);color:var(--accent-2);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none;border:1px solid #4a2f12}
+  .step-h h2{font-size:16px;margin:0;letter-spacing:-.2px}
+  .step-h .hint{color:var(--muted);font-size:12.5px;margin-left:auto}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  label.fld{display:block;font-size:12px;color:var(--muted);margin:0 0 5px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+
+  textarea,input,select{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;color:var(--txt);padding:11px 12px;font-family:var(--sans);font-size:14.5px;resize:vertical}
+  textarea:focus,input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  textarea#copy{min-height:190px;line-height:1.55}
+  select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b919e' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+
+  .btn{appearance:none;border:none;border-radius:10px;padding:12px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:var(--sans);transition:transform .05s,opacity .15s;display:inline-flex;align-items:center;gap:8px}
+  .btn:active{transform:translateY(1px)}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#1a0e02}
+  .btn-ghost{background:var(--panel-2);color:var(--txt);border:1px solid var(--line)}
+  .btn-sm{padding:7px 12px;font-size:12.5px;font-weight:600}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+
+  .spin{width:15px;height:15px;border:2px solid rgba(0,0,0,.25);border-top-color:#1a0e02;border-radius:50%;animation:spin .7s linear infinite}
+  .btn-ghost .spin{border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent-2)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* analysis */
+  #analysisBox{margin-top:14px}
+  .ana-summary{font-size:14px;color:var(--txt);background:var(--accent-soft);border:1px solid #4a2f12;border-radius:10px;padding:12px 14px;margin-bottom:12px}
+  .ana-summary b{color:var(--accent-2)}
+
+  /* format library */
+  .grp-title{display:flex;align-items:center;gap:8px;margin:20px 0 10px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .grp-title .pill{font-size:10.5px;padding:2px 7px;border-radius:20px;font-weight:700;letter-spacing:.03em}
+  .pill.ai{background:var(--violet-soft);color:var(--violet);border:1px solid #3a3160}
+  .pill.noai{background:var(--green-soft);color:var(--green);border:1px solid #1f4031}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:680px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;cursor:pointer;position:relative;transition:border-color .15s,background .15s}
+  .card:hover{border-color:#3a404c}
+  .card.sel{border-color:var(--accent);background:#1a1813;box-shadow:0 0 0 1px var(--accent) inset}
+  .card.rec::after{content:"★ recommended";position:absolute;top:-9px;right:10px;background:var(--accent);color:#1a0e02;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;letter-spacing:.03em}
+  .card-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .chk{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--muted-2);flex:none;display:flex;align-items:center;justify-content:center;transition:.15s}
+  .card.sel .chk{background:var(--accent);border-color:var(--accent)}
+  .chk svg{opacity:0}.card.sel .chk svg{opacity:1}
+  .card-name{font-weight:700;font-size:14px;letter-spacing:-.1px}
+  .tag{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:5px;letter-spacing:.04em;border:1px solid}
+  .tag.ai{background:var(--violet-soft);color:var(--violet);border-color:#3a3160}
+  .tag.opt{background:var(--violet-soft);color:var(--violet);border-color:#3a3160;opacity:.85}
+  .tag.noai{background:var(--green-soft);color:var(--green);border-color:#1f4031}
+  .tag.tier{background:#202329;color:var(--muted);border-color:var(--line)}
+  .card-desc{font-size:12.5px;color:var(--muted);line-height:1.45}
+  .card-reason{font-size:12px;color:var(--accent-2);margin-top:6px;font-style:italic}
+  .card-ex{font-size:11.5px;margin-top:7px}
+  .extra{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:none;gap:8px;flex-wrap:wrap}
+  .card.sel .extra.has{display:flex}
+  .extra > div{flex:1;min-width:120px}
+  .extra label{font-size:10.5px}
+  .extra select,.extra input{padding:7px 9px;font-size:12.5px}
+
+  .selbar{position:sticky;bottom:0;margin-top:18px;background:linear-gradient(0deg,var(--bg) 60%,transparent);padding-top:14px}
+  .selbar-inner{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .selcount{font-size:13px;color:var(--muted)}.selcount b{color:var(--txt)}
+
+  /* results */
+  .res-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-top:14px;overflow:hidden}
+  .res-head{display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+  .res-head .card-name{font-size:15px}
+  .res-head .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .res-body{padding:6px 18px 16px}
+  .res-body h2{font-size:17px;margin:16px 0 6px}
+  .res-body h3{font-size:14px;margin:16px 0 6px;color:var(--accent-2);text-transform:uppercase;letter-spacing:.04em}
+  .res-body h4{font-size:13px;margin:12px 0 4px;color:var(--txt)}
+  .res-body ul{margin:6px 0;padding-left:20px}
+  .res-body li{margin:3px 0}
+  .res-body p{margin:8px 0}
+  .res-body .script-block{background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 14px;white-space:pre-wrap;font-size:14px;line-height:1.6}
+  .copied{color:var(--green)!important}
+
+  .err{color:#ff9a8a;font-size:13px;margin-top:8px}
+  .empty{color:var(--muted-2);font-size:13px;text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:12px}
+  .hidden{display:none!important}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--green);color:#06140d;padding:9px 16px;border-radius:24px;font-weight:700;font-size:13px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+  .promptModal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
+  .promptModal.show{display:flex}
+  .pm-inner{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:760px;width:100%;max-height:82vh;display:flex;flex-direction:column;overflow:hidden}
+  .pm-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .pm-head h3{margin:0;font-size:15px}
+  .pm-body{padding:14px 16px;overflow:auto}
+  .pm-body textarea{min-height:300px;font-family:var(--mono);font-size:12.5px}
+  .footer{margin-top:40px;color:var(--muted-2);font-size:11.5px;text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <header>
+      <div class="logo">R</div>
+      <div>
+        <h1>Reiteration Engine</h1>
+        <p class="sub">Paste a winner → pick the best formats → get editor-ready reiterations · Volume 1</p>
+      </div>
+    </header>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="brand" style="max-width:230px">
+        <option value="">Product context (optional)</option>
+        <option value="TerraShell — emergency / survival sleeping bag (warmth, being unprepared in an emergency, getting stranded/cold)">TerraShell — emergency sleeping bag</option>
+        <option value="TerraStrike — car window breaker / escape tool (being trapped in a sinking or crashed car, saving family)">TerraStrike — car window breaker</option>
+        <option value="TerraBolt — portable door security bar (home invasion, intruders, feeling unsafe alone, travel/hotel safety)">TerraBolt — door security bar</option>
+        <option value="Other survival / security product">Other (survival / security)</option>
+      </select>
+      <button id="aiCfgBtn" class="btn btn-ghost btn-sm" title="Connect AI engine">⚙ AI</button>
+    </div>
+  </div>
+
+  <div id="aiBanner" class="banner warn">Checking AI engine…</div>
+
+  <div id="aiPanel" class="panel" style="display:none;margin-top:10px">
+    <div class="row">
+      <div style="flex:2;min-width:240px">
+        <label class="fld">Anthropic API key</label>
+        <input id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off" />
+      </div>
+      <div style="flex:1;min-width:160px">
+        <label class="fld">Model</label>
+        <select id="apiModel">
+          <option value="claude-sonnet-4-6">Sonnet 4.6 (recommended)</option>
+          <option value="claude-opus-4-8">Opus 4.8 (max quality)</option>
+          <option value="claude-haiku-4-5-20251001">Haiku 4.5 (fast / cheap)</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="saveAi" class="btn btn-primary btn-sm">Save &amp; connect</button>
+      <button id="clearAi" class="btn btn-ghost btn-sm">Clear key</button>
+      <span class="sub" style="font-size:12px">Stored only in this browser, sent directly to Anthropic. Get a key at console.anthropic.com.</span>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <section class="step">
+    <div class="step-h"><span class="step-n">1</span><h2>Paste the winner copy</h2><span class="hint">the exact script that's working</span></div>
+    <div class="panel">
+      <textarea id="copy" placeholder="Paste your winning ad script here…"></textarea>
+      <div class="row" style="margin-top:10px">
+        <div style="flex:1;min-width:200px">
+          <label class="fld">Ad name / hook (optional)</label>
+          <input id="adname" placeholder='e.g. "3 reasons your car is a death trap"' />
+        </div>
+      </div>
+      <div class="actions">
+        <button id="analyzeBtn" class="btn btn-primary">Analyze formats</button>
+        <button id="skipBtn" class="btn btn-ghost btn-sm">Skip → choose manually</button>
+        <span id="analyzeErr" class="err"></span>
+      </div>
+    </div>
+    <div id="analysisBox"></div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step hidden" id="step2">
+    <div class="step-h"><span class="step-n">2</span><h2>Select formats to iterate</h2><span class="hint">recommended are pre-selected — add or remove freely</span></div>
+    <div id="grpAI"></div>
+    <div id="grpNoAI"></div>
+
+    <div class="selbar">
+      <div class="selbar-inner">
+        <span class="selcount"><b id="selN">0</b> formats selected</span>
+        <div style="margin-left:auto;display:flex;gap:10px">
+          <button id="generateBtn" class="btn btn-primary">Generate reiterations</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step hidden" id="step3">
+    <div class="step-h"><span class="step-n">3</span><h2>Editor-ready reiterations</h2>
+      <span class="hint"><button id="copyAllBtn" class="btn btn-ghost btn-sm">Copy all</button></span>
+    </div>
+    <div id="results"></div>
+  </section>
+
+  <div class="footer">
+    Reiteration Engine · format library v1 · stays faithful to your winner copy and only adapts what each format requires.<br>
+    Runs the AI via claude.ai or your Anthropic API key. With neither connected, it gives you a ready-to-paste prompt.
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied</div>
+<div class="promptModal" id="pm">
+  <div class="pm-inner">
+    <div class="pm-head">
+      <h3 id="pmTitle">Prompt</h3>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" id="pmCopy">Copy prompt</button>
+        <button class="btn btn-ghost btn-sm" id="pmClose">Close</button>
+      </div>
+    </div>
+    <div class="pm-body">
+      <p class="sub" style="margin-top:0">AI engine not detected here. Copy this prompt and paste it into Claude or ChatGPT — it contains everything needed.</p>
+      <textarea id="pmText" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   FORMAT LIBRARY  (faithful to "Reiterations Revolution Vol.1")
+   ai: 'yes' = AI rewrites the words | 'optional' = AI enhances | 'no' = copy unchanged, editor brief only
+   ============================================================ */
+const REACTION_LIBRARY = `FIRST PART OF THE AD (reactor appears at 0s or after 3-5s, video pauses, reactor speaks). Replace the placeholder pain with THIS ad's pain:
+"I Keep Seeing This Ad" style:
+ - "I keep seeing this video about {pain}… let's see if it's actually legit."
+ - "This ad keeps popping up about {pain}… I'm curious now."
+ - "Okay this video about {pain} keeps showing up… let's watch."
+ - "I've seen this guy explaining {pain} everywhere… let's see what he says."
+Skeptical viewer style:
+ - "I'm a bit skeptical… but let's see what this {authority} says."
+ - "Not sure I believe this… but I'll give it a watch."
+ - "I usually skip these ads… but this one caught my attention."
+Curiosity style:
+ - "This explains why {audience} get {pain}… interesting."
+ - "Apparently most people misunderstand {pain}… let's see."
+ - "They say the real cause of {pain} is different…"
+Relatable viewer style:
+ - "If this actually helps with {pain}, I'm listening."
+ - "Maybe this is why {my version of the pain}."
+Strong native hooks (very scroll-stopping):
+ - "This video about {pain} keeps showing up…"
+ - "Everyone keeps sharing this video about {pain}…"
+ - "{Audience} should probably watch this…"
+
+DURING THE AD (reactor appears 4-5 times total; when he/she appears the video stops, reactor reacts, video resumes):
+Surprise / discovery: "Ah wow, I didn't know that!" · "Wait… seriously?" · "That actually makes a lot of sense." · "So THAT'S the real reason?"
+Recognition ("that's me"): "That's exactly what happens to me." · "No wonder {my symptom}." · "I always thought it was just {wrong assumption}."
+Realization: "Ah! That explains it." · "Now it all clicks." · "I never connected those dots before."
+Curiosity / lean-in: "Wait, keep going…" · "Okay, I'm listening." · "Hold on, this is interesting."
+Validation / agreement: "That actually sounds right." · "Yeah, that makes sense." · "That sounds logical."
+Relief / hope: "So it's not {feared cause}?" · "That's actually really encouraging." · "Maybe there's hope after all."
+Strong engagement (good mid-ad): "Wait… this part is important." · "This is the part people miss." · "Most people don't know this." · "You should really listen to this."`;
+
+const FORMATS = [
+  {
+    id:'podcast_speaker', name:'Podcast (speaker)', ai:'no', tier:'',
+    desc:'A podcaster reads the script on camera, shown during the video (full screen or in overlay), alternating with footage / brolls. She just talks, acting as a speaker.',
+    example:'https://f.io/VpH4YT9v',
+    editor:'Film/AI-avatar a podcaster reading the script verbatim. Show her full-screen and in overlay, alternating with relevant b-roll/footage. Podcast set/mic vibe.',
+    rewrite:''
+  },
+  {
+    id:'podcast_conversation', name:'Podcast (conversation)', ai:'yes', tier:'',
+    desc:'Two people: a podcaster + a guest. The single-narrator script becomes a natural back-and-forth — guest reacts, adds relatable anecdotes, cites studies.',
+    example:'https://next.frame.io/share/af5218d6-55d5-469d-ba36-b5fab1fe07ea/view/4b924fcc-099b-4b7f-b95d-6354d0e85ee7',
+    editor:'Two-person podcast set. Person #1 carries the script; Person #2 reacts, agrees, adds anecdotes/studies. Cut between both speakers + brolls.',
+    rewrite:'Split the single-narrator script into a natural conversation between Person #1 (host, carries the original copy) and Person #2 (guest). Person #2 reacts, agrees, adds short relatable anecdotes ("yes, that\'s why when I…") and occasionally cites credibility ("a study from UCLA said…"). Keep ALL the original content, proof and persuasion — just redistribute it into dialogue. Do not shorten the argument.'
+  },
+  {
+    id:'podcast_authority', name:'Podcast (authority + patient)', ai:'yes', tier:'',
+    desc:'A conversation between an authority and someone who suffers the problem. Authority teaches the mechanism; the sufferer reacts, gives exclamations and asks skeptical questions the authority answers.',
+    example:'https://r2.foreplay.co/4070939873222526/5be5b4ad4704185b8d80778a9b1d724a.mp4',
+    editor:'Interview setup: authority (can be the host or the guest) + a real-feeling sufferer. Keep the sufferer\'s facial expressions visible during reactions. Cut between both + brolls.',
+    rewrite:'Recast the script as a dialogue between an AUTHORITY (delivers the core teaching/mechanism — keep the original copy here) and a PATIENT/SUFFERER who: injects the emotional pain ("yes, that\'s why when I try to… I feel…"), gives exclamations ("oh wow… I didn\'t know that"), and asks the skeptical/objection questions the prospect is thinking ("but are there studies confirming that?", "can\'t I just use a cheaper alternative?") — which the authority then answers. Preserve every persuasion beat of the original.'
+  },
+  {
+    id:'cartoon_graphic', name:'Cartoon-graphic', ai:'no', tier:'M',
+    desc:'The whole ad uses cartoon-style animation / brolls — no real people or human AI avatars. Same script, just cartoon visuals.',
+    example:'https://www.facebook.com/ads/library/?id=2150409022362235',
+    editor:'Keep the script/VO identical. Replace ALL visuals with cartoon-style animation/brolls. No real people, no human AI avatars.',
+    rewrite:''
+  },
+  {
+    id:'whiteboard', name:'Explaining on a whiteboard', ai:'no', tier:'H',
+    desc:'A presenter in a WHITE COAT only (no stethoscope or doctor props) reads the script while drawing things on a whiteboard — like teaching an audience.',
+    example:'https://www.facebook.com/ads/library/?id=1674899890170736 · our example: https://f.io/i5wGqqyE',
+    editor:'Presenter wears a white coat ONLY — no stethoscope or other doctor props (AppLovin sensitivity). They read the script verbatim while drawing the relevant items/words on a whiteboard as they speak.',
+    rewrite:''
+  },
+  {
+    id:'stage', name:'Stage', ai:'optional', tier:'M',
+    desc:'An avatar delivers the script to an audience on a stage (alternating with footage/brolls). Teaching scripts → authority on stage; 1st-person stories → testimonial on stage. AI can add audience Q&A.',
+    example:'https://f.io/7-77RaKD',
+    editor:'Avatar on a stage addressing an audience, alternating with brolls. If the script teaches/shares info → present as an authority teaching. If it\'s a 1st-person story → present as a testimonial sharing his experience (optionally being interviewed on stage). "Wild"/tribal-dressed avatars or normal avatars both work.',
+    rewrite:'Keep the original script as the spine. Decide: is this a TEACHING script (→ authority on stage) or a 1st-PERSON STORY (→ testimonial on stage)? Then insert 2-4 audience moments — a question shouted from the audience and the speaker\'s answer — at natural points to make it interactive, engaging and real. Do not remove or weaken any original content.'
+  },
+  {
+    id:'change_avatar', name:'Change of Avatar', ai:'yes', tier:'',
+    desc:'Swap the avatar — which means rewriting the pain, problems, benefits and emotional dimension to fit them, WITHOUT changing the structure. (e.g. 65yo woman: "can\'t cook for the family" → 40yo woman: "can\'t work, risks getting fired".)',
+    example:'',
+    editor:'Recast with the new avatar (age/sex/race/persona). Reshoot/regenerate with the matching avatar; everything else (pacing, structure, edit) stays the same.',
+    rewrite:'Rewrite the script for a NEW avatar. Keep the STRUCTURE identical — same hook position, same beats, same proof, same offer, same length. Only change the problems, pain, benefits and emotional dimension so they ring true for this specific avatar (their daily life, what they\'d lose, what they fear). Match their voice and concerns.',
+    fields:[
+      {key:'age', label:'Age', type:'select', opts:['40-55','56-65','66+']},
+      {key:'sex', label:'Sex', type:'select', opts:['Female','Male']},
+      {key:'race', label:'Race', type:'select', opts:['White','Black','Other']},
+      {key:'persona', label:'Persona / life', type:'text', ph:'e.g. loves cooking for family / prepper / road-tripper'}
+    ]
+  },
+  {
+    id:'reaction_realtime', name:'Reaction in real time', ai:'yes', tier:'',
+    desc:'An authority (or a client/sufferer) reacts to the video in real time, sometimes pausing it to explain a mechanism. Reactor\'s facial expression must always stay visible.',
+    example:'https://www.facebook.com/100076057694075/posts/725151803363403',
+    editor:'Overlay the reactor reacting to the playing ad. Keep his face/expression visible at all times — tell editors to play with that. The reactor can pause the video to explain a mechanism, then resume. (e.g. 30s of light reaction → he stops the ad → explains the mechanism → sells.)',
+    rewrite:'Produce a REACTION TRACK over the original ad. Output a timestamped list: at which moments the reactor interjects, what he says, and where he PAUSES the video to explain a mechanism in his own words, then where selling begins. Specify whether the reactor is an AUTHORITY (stops to teach the mechanism) or a CLIENT/SUFFERER (reacts emotionally / relates). Keep the original ad\'s message intact; the reactor amplifies and clarifies it.',
+    fields:[
+      {key:'reactor', label:'Reactor type', type:'select', opts:['Authority (stops to explain mechanism)','Client / pain sufferer (reacts & relates)']}
+    ]
+  },
+  {
+    id:'bodypart_cartoon', name:'Body-part cartoon speaker', ai:'no', tier:'',
+    desc:'A body part in a funny cartoon style is the speaker and reads the script (e.g. a little animated foot presents a neuropathy ad).',
+    example:'https://www.facebook.com/ads/library/?id=1590315042066904',
+    editor:'Animate the relevant body part (cartoon, funny) as the on-screen speaker delivering the script verbatim.',
+    rewrite:''
+  },
+  {
+    id:'doctor_cartoon', name:'Doctor cartoon', ai:'no', tier:'',
+    desc:'A CARTOON doctor reads the script. Used as a workaround because real doctors are AppLovin-sensitive.',
+    example:'https://www.facebook.com/ads/library/?id=1277693267683022',
+    editor:'Use a cartoon doctor avatar (not a real doctor — AppLovin sensitivity) reading the script verbatim.',
+    rewrite:''
+  },
+  {
+    id:'pov', name:'POV', ai:'no', tier:'M',
+    desc:'Edited from the protagonist\'s point of view, like a camera on his head/eyes. For products applied where he can\'t see (e.g. back), he applies it to spouse; for feet, POV of putting it on.',
+    example:'https://www.youtube.com/watch?v=yYLcdxUIJ-0 · tutorial: https://drive.google.com/file/d/18y9s1blc5rBl1NDmm7J3Wjx9FD47CUrP/view',
+    editor:'Shoot/edit entirely from first-person POV (camera = protagonist\'s eyes). If the product is used somewhere he can\'t see, show him using it on a spouse; otherwise POV of him using it himself. See TikTok references in the doc.',
+    rewrite:''
+  },
+  {
+    id:'talking_head', name:'Talking Head (overlay)', ai:'no', tier:'E',
+    desc:'A talking head appears in overlay with the original video (sometimes full screen, sometimes nothing). Creates empathy — someone to relate to, not just an AI voiceover.',
+    example:'https://f.io/a_H8N06d',
+    editor:'Layer a talking head over the original video at intervals — sometimes overlay, sometimes full screen, sometimes hidden. Goal: a relatable human face, not pure VO.',
+    rewrite:''
+  },
+  {
+    id:'grwm', name:'Get Ready With Me (GRWM)', ai:'no', tier:'M',
+    desc:'The person talks through the script while doing a routine (skincare, makeup, cooking, etc.). No brolls. They can interact with the product/pain on camera during the routine.',
+    example:'',
+    editor:'Just the person doing a routine action (skincare/makeup/cooking — fit the avatar) while delivering the script. NO brolls. They can demonstrate the product or point to the pain area on camera during the routine.',
+    rewrite:''
+  },
+  {
+    id:'reaction_commentator', name:'Reaction / commentator', ai:'optional', tier:'M',
+    desc:'Take the existing ad and add a reactor 4-5 times (at the start or after 3-5s, then during). When they appear the video stops and they say template reaction lines — adapted to your ad\'s pain.',
+    example:'https://vimeo.com/1075437563',
+    editor:'Add a reactor over the existing ad, appearing 4-5 times total: once at the start (0s or after 3-5s) then during. Each time the reactor appears, the ad PAUSES, the reactor speaks a short reaction line, then the ad resumes.',
+    rewrite:'Place the reactor 4-5 times over the ad. Output a timestamped list: the opening reactor line (pick the most native-feeling one) and 3-4 during-the-ad reactions, choosing from the reaction library below and adapting each line to THIS ad\'s pain/audience. Make it feel organic, not scripted.\n\nREACTION LIBRARY:\n'+REACTION_LIBRARY
+  }
+];
+
+/* ============================================================
+   STATE + HELPERS
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const state = { selected:{}, recommended:{}, results:{} };
+
+/* AI config: works 3 ways — claude.ai (window.claude), your Anthropic API key, or copy-prompt fallback */
+const cfg = { apiKey:'', model:'claude-sonnet-4-6' };
+try{ const s=JSON.parse(localStorage.getItem('reiter_ai')||'{}'); cfg.apiKey=s.apiKey||''; cfg.model=s.model||'claude-sonnet-4-6'; }catch(e){}
+function saveCfg(){ try{ localStorage.setItem('reiter_ai',JSON.stringify(cfg)); }catch(e){} }
+function hasNativeAI(){ return !!(window.claude && typeof window.claude.complete==='function'); }
+function hasAI(){ return hasNativeAI() || !!cfg.apiKey; }
+
+async function apiComplete(prompt, maxTokens){
+  const res = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'content-type':'application/json',
+      'x-api-key':cfg.apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({ model:cfg.model||'claude-sonnet-4-6', max_tokens:maxTokens||4096, messages:[{role:'user',content:prompt}] })
+  });
+  if(!res.ok){ let t=''; try{ const j=await res.json(); t=(j.error&&j.error.message)||JSON.stringify(j); }catch(e){ t=await res.text(); } throw new Error('API '+res.status+' — '+String(t).slice(0,240)); }
+  const data=await res.json();
+  return (data.content||[]).map(b=>b.text||'').join('').trim();
+}
+async function aiComplete(prompt, maxTokens){
+  if(hasNativeAI()) return await window.claude.complete(prompt);
+  if(cfg.apiKey) return await apiComplete(prompt, maxTokens);
+  const e=new Error('no-ai'); e.noAI=true; throw e;
+}
+
+function toggleAiPanel(){ const p=$('#aiPanel'); p.style.display = p.style.display==='none'?'block':'none'; }
+function aiBanner(){
+  const b = $('#aiBanner');
+  const wireLink=()=>{ const l=$('#bnCfg'); if(l) l.addEventListener('click',e=>{e.preventDefault();toggleAiPanel();}); };
+  if(hasNativeAI()){ b.className='banner ok'; b.textContent='✓ AI engine connected (claude.ai) — Analyze & Generate run automatically.'; }
+  else if(cfg.apiKey){ b.className='banner ok'; b.innerHTML='✓ AI connected with your Anthropic API key — Analyze &amp; Generate run automatically. <a href="#" id="bnCfg">change key</a>'; wireLink(); }
+  else { b.className='banner warn'; b.innerHTML='⚠ AI not connected. <a href="#" id="bnCfg">Connect your Anthropic API key</a> to generate inside the tool — otherwise the buttons just give you a ready-to-paste prompt.'; wireLink(); }
+}
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1400); }
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function copyText(txt){
+  try{ await navigator.clipboard.writeText(txt); toast('Copied'); }
+  catch(e){ const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('Copied'); }
+}
+
+/* tiny, safe markdown -> html (line based) */
+function mdToHtml(md){
+  const lines = md.replace(/\r/g,'').split('\n');
+  let html='', inList=false, inScript=false;
+  const inline = t => escapeHtml(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>');
+  const closeList=()=>{ if(inList){html+='</ul>';inList=false;} };
+  for(let raw of lines){
+    let l=raw.trimEnd();
+    if(/^#{2,4}\s+/.test(l)){
+      closeList();
+      const lvl=(l.match(/^#+/)[0].length);
+      const txt=l.replace(/^#+\s+/,'');
+      html+= lvl<=2 ? `<h2>${inline(txt)}</h2>` : lvl===3 ? `<h3>${inline(txt)}</h3>` : `<h4>${inline(txt)}</h4>`;
+    } else if(/^[-*]\s+/.test(l)){
+      if(!inList){html+='<ul>';inList=true;}
+      html+=`<li>${inline(l.replace(/^[-*]\s+/,''))}</li>`;
+    } else if(l===''){
+      closeList();
+    } else {
+      closeList();
+      html+=`<p>${inline(l)}</p>`;
+    }
+  }
+  closeList();
+  return html;
+}
+
+/* ============================================================
+   STEP 1 — ANALYZE
+   ============================================================ */
+function buildAnalysisPrompt(copy, adname, brand){
+  const list = FORMATS.map(f=>`- ${f.id} | ${f.name} | ${f.ai==='no'?'editor-only (copy unchanged)':f.ai==='optional'?'editor-only or AI-enhanced':'AI rewrites copy'} — ${f.desc}`).join('\n');
+  return `You are a senior direct-response creative strategist.${brand?` The product is: ${brand}.`:' The brand is a US D2C survival/security e-commerce.'}
+A WINNER ad script is below. From the FIXED format library, choose the 3-6 formats this specific winner would adapt to BEST while preserving its persuasion.
+
+Decide the script type first: a TEACHING/MECHANISM script (facts, "X reasons", explaining a cause) fits authority/podcast-authority, stage-authority, whiteboard, cartoon-graphic, reaction-realtime. A 1st-PERSON STORY / testimonial fits GRWM, POV, change-of-avatar, talking-head, podcast-conversation. Reaction/commentator works on almost anything.
+Note: in this niche "pain" = the core fear/problem the product solves (e.g. being unprepared in an emergency, trapped in a car, a home intrusion).
+
+FORMAT LIBRARY (id | name | type — what it is):
+${list}
+
+WINNER SCRIPT${adname?` ("${adname}")`:''}:
+"""${copy}"""
+
+Return ONLY valid JSON, no prose, exactly this shape:
+{"summary":"one sentence on what kind of script this is and the angle","recommendations":[{"id":"<format id>","confidence":1-5,"reason":"one short sentence tied to THIS copy"}]}`;
+}
+
+function extractJson(text){
+  try{ return JSON.parse(text); }catch(e){}
+  const m = text.match(/\{[\s\S]*\}/);
+  if(m){ try{ return JSON.parse(m[0]); }catch(e){} }
+  return null;
+}
+
+async function runAnalyze(){
+  const copy=$('#copy').value.trim();
+  $('#analyzeErr').textContent='';
+  if(!copy){ $('#analyzeErr').textContent='Paste the winner copy first.'; return; }
+  const prompt=buildAnalysisPrompt(copy,$('#adname').value.trim(),$('#brand').value);
+  const btn=$('#analyzeBtn'); const orig=btn.innerHTML;
+
+  if(!hasAI()){ openPrompt('Analysis prompt', prompt); renderLibrary(); $('#step2').classList.remove('hidden'); return; }
+
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Analyzing…';
+  try{
+    const out=await aiComplete(prompt, 1500);
+    const data=extractJson(out);
+    state.recommended={};
+    if(data && data.recommendations){
+      data.recommendations.forEach(r=>{ state.recommended[r.id]={reason:r.reason,confidence:r.confidence}; });
+      const recs=data.recommendations.map(r=>r.id);
+      // preselect recommended
+      state.selected={}; recs.forEach(id=>state.selected[id]=true);
+      renderAnalysis(data);
+    } else {
+      $('#analysisBox').innerHTML=`<div class="ana-summary">Couldn't parse a clean recommendation — pick formats manually below.</div>`;
+    }
+    renderLibrary();
+    $('#step2').classList.remove('hidden');
+    $('#step2').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    $('#analyzeErr').textContent='AI error: '+(e.message||e)+' — try "Skip → choose manually".';
+  }finally{ btn.disabled=false; btn.innerHTML=orig; }
+}
+
+function renderAnalysis(data){
+  const recs=data.recommendations.map(r=>{
+    const f=FORMATS.find(x=>x.id===r.id); if(!f) return '';
+    const stars='★'.repeat(r.confidence||3);
+    const badge=f.ai==='no'?'<span class="tag noai">EDITOR</span>':f.ai==='optional'?'<span class="tag opt">AI OPT</span>':'<span class="tag ai">AI</span>';
+    return `<div style="margin:4px 0"><b>${f.name}</b> ${badge} <span style="color:var(--accent-2)">${stars}</span><br><span style="color:var(--muted);font-size:13px">${escapeHtml(r.reason||'')}</span></div>`;
+  }).join('');
+  $('#analysisBox').innerHTML=`<div class="ana-summary"><b>Read:</b> ${escapeHtml(data.summary||'')}</div><div class="panel">${recs}</div>`;
+}
+
+/* ============================================================
+   STEP 2 — LIBRARY
+   ============================================================ */
+function tagFor(f){
+  const ai=f.ai==='no'?'<span class="tag noai">EDITOR ONLY</span>':f.ai==='optional'?'<span class="tag opt">AI OPTIONAL</span>':'<span class="tag ai">AI REWRITE</span>';
+  const tier=f.tier?`<span class="tag tier">${f.tier}</span>`:'';
+  return ai+tier;
+}
+function cardHtml(f){
+  const rec=state.recommended[f.id];
+  const sel=state.selected[f.id];
+  const reason=rec?`<div class="card-reason">★ ${escapeHtml(rec.reason||'recommended')}</div>`:'';
+  const ex=f.example?`<div class="card-ex"><a href="${f.example.split(' ')[0]}" target="_blank" rel="noopener">↗ reference example</a></div>`:'';
+  let extra='';
+  if(f.fields){
+    extra='<div class="extra has" onclick="event.stopPropagation()">'+f.fields.map(fd=>{
+      if(fd.type==='select'){
+        return `<div><label class="fld">${fd.label}</label><select data-fid="${f.id}" data-fk="${fd.key}">${fd.opts.map(o=>`<option>${o}</option>`).join('')}</select></div>`;
+      }
+      return `<div><label class="fld">${fd.label}</label><input data-fid="${f.id}" data-fk="${fd.key}" placeholder="${fd.ph||''}"/></div>`;
+    }).join('')+'</div>';
+  }
+  return `<div class="card ${sel?'sel':''} ${rec?'rec':''}" data-id="${f.id}">
+    <div class="card-top">
+      <div class="chk"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1a0e02" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>
+      <span class="card-name">${f.name}</span>
+      <span style="margin-left:auto;display:flex;gap:4px">${tagFor(f)}</span>
+    </div>
+    <div class="card-desc">${escapeHtml(f.desc)}</div>
+    ${reason}${ex}${extra}
+  </div>`;
+}
+function renderLibrary(){
+  const ai=FORMATS.filter(f=>f.ai!=='no');
+  const noai=FORMATS.filter(f=>f.ai==='no');
+  $('#grpAI').innerHTML=`<div class="grp-title"><span class="pill ai">AI rewrites copy</span> these change the words</div><div class="grid">${ai.map(cardHtml).join('')}</div>`;
+  $('#grpNoAI').innerHTML=`<div class="grp-title"><span class="pill noai">Editor brief only</span> copy stays identical — only the shoot/edit changes</div><div class="grid">${noai.map(cardHtml).join('')}</div>`;
+  document.querySelectorAll('.card').forEach(c=>{
+    c.addEventListener('click',()=>{
+      const id=c.dataset.id;
+      state.selected[id]=!state.selected[id];
+      c.classList.toggle('sel');
+      updateSelCount();
+    });
+  });
+  updateSelCount();
+}
+function updateSelCount(){ $('#selN').textContent=Object.values(state.selected).filter(Boolean).length; }
+
+function collectFields(id){
+  const f=FORMATS.find(x=>x.id===id); if(!f.fields) return null;
+  const vals={};
+  f.fields.forEach(fd=>{
+    const el=document.querySelector(`[data-fid="${id}"][data-fk="${fd.key}"]`);
+    if(el) vals[fd.label]=el.value;
+  });
+  return vals;
+}
+
+/* ============================================================
+   STEP 3 — GENERATE
+   ============================================================ */
+function buildGenPrompt(f, copy, adname, brand){
+  const fields=collectFields(f.id);
+  const fieldStr = fields ? '\nTARGET FOR THIS REITERATION:\n'+Object.entries(fields).map(([k,v])=>`- ${k}: ${v}`).join('\n')+'\n' : '';
+  const editorOnly = f.ai==='no';
+  const task = editorOnly
+    ? `This format keeps the COPY IDENTICAL — only the shoot/edit changes. Do NOT rewrite the words.`
+    : `HOW TO REITERATE: ${f.rewrite}`;
+  const scriptSection = editorOnly
+    ? `## Script\nCopy is unchanged for this format — instruct the editor to use the original script verbatim. (Restate it cleanly below for convenience.)`
+    : `## Regenerated script\nWrite the full reiterated script here.`;
+  return `You are an elite direct-response copywriter and creative director.${brand?` The product is: ${brand}.`:' The brand is a US D2C survival/security e-commerce.'}
+You adapt a WINNER ad script into ONE specific reiteration format for video editors.
+
+NON-NEGOTIABLE RULES:
+- The winner copy is extremely high quality, written by top copywriters. Stay as close to it as humanly possible: same hook, same proof, same mechanism, same offer, same emotional beats, same structure and roughly the same length. Never water it down or add filler.
+- Write in the SAME language as the winner copy.
+- "pain" in any format note = the core fear/problem THIS product solves (being unprepared, trapped, broken into, etc.). Map examples to this product.
+- Be concrete and editor-ready: who is on screen, what they say, overlays, timing, brolls vs none, what stays visible.
+
+FORMAT: ${f.name}${f.tier?` (tier ${f.tier})`:''}
+WHAT IT IS: ${f.desc}
+EDITOR BASELINE: ${f.editor}
+${task}${fieldStr}
+
+WINNER SCRIPT${adname?` ("${adname}")`:''}:
+"""${copy}"""
+
+OUTPUT IN MARKDOWN, exactly these sections:
+${scriptSection}
+
+## Editor instructions
+Bullet list of exactly what the video editor must do for THIS format (casting, shots, overlays, timing, who-says-what, what must stay visible, brolls or none, the reference example to mimic).
+
+## Notes
+Casting / avatar / persona, tier, and any cautions (e.g. white coat only, cartoon doctor not real, keep reactor's face visible, no brolls). Keep it short.`;
+}
+
+async function runGenerate(){
+  const copy=$('#copy').value.trim();
+  if(!copy){ toast('Paste the copy first'); return; }
+  const ids=Object.keys(state.selected).filter(k=>state.selected[k]);
+  if(!ids.length){ toast('Select at least one format'); return; }
+  const adname=$('#adname').value.trim(), brand=$('#brand').value;
+
+  if(!hasAI()){
+    const big=ids.map(id=>{const f=FORMATS.find(x=>x.id===id);return `\n\n========== ${f.name} ==========\n`+buildGenPrompt(f,copy,adname,brand);}).join('');
+    openPrompt('Generation prompts ('+ids.length+' formats)', 'Run each block below in Claude/ChatGPT:\n'+big);
+    return;
+  }
+
+  $('#step3').classList.remove('hidden');
+  const res=$('#results'); res.innerHTML='';
+  $('#step3').scrollIntoView({behavior:'smooth',block:'start'});
+
+  // render placeholders
+  ids.forEach(id=>{
+    const f=FORMATS.find(x=>x.id===id);
+    const div=document.createElement('div'); div.className='res-card'; div.id='res-'+id;
+    div.innerHTML=`<div class="res-head"><span class="card-name">${f.name}</span><span>${tagFor(f)}</span><div class="right"><span class="sub" id="st-${id}"><span class="spin" style="border-top-color:var(--accent-2);border-color:rgba(255,255,255,.2)"></span></span></div></div><div class="res-body" id="body-${id}"><div class="empty">Queued…</div></div>`;
+    res.appendChild(div);
+  });
+
+  // sequential to be gentle on the AI engine
+  for(const id of ids){
+    const f=FORMATS.find(x=>x.id===id);
+    const body=$('#body-'+id), st=$('#st-'+id);
+    body.innerHTML=`<div class="empty"><span class="spin" style="display:inline-block;vertical-align:middle;border-top-color:var(--accent-2);border-color:rgba(255,255,255,.2)"></span> Generating…</div>`;
+    try{
+      const out=await aiComplete(buildGenPrompt(f,copy,adname,brand), 8000);
+      state.results[id]=out;
+      body.innerHTML=mdToHtml(out);
+      // style the first script block
+      st.innerHTML=`<button class="btn btn-ghost btn-sm" data-copy="${id}">Copy</button>`;
+      st.querySelector('button').addEventListener('click',ev=>{ copyText(out); ev.target.textContent='Copied ✓'; ev.target.classList.add('copied'); setTimeout(()=>{ev.target.textContent='Copy';ev.target.classList.remove('copied');},1500); });
+    }catch(e){
+      body.innerHTML=`<div class="err">AI error: ${escapeHtml(e.message||String(e))}</div>`;
+      st.innerHTML='';
+    }
+  }
+}
+
+function openPrompt(title,text){ $('#pmTitle').textContent=title; $('#pmText').value=text; $('#pm').classList.add('show'); }
+
+/* ============================================================
+   WIRING
+   ============================================================ */
+aiBanner();
+$('#aiCfgBtn').addEventListener('click',toggleAiPanel);
+$('#apiKey').value=cfg.apiKey; $('#apiModel').value=cfg.model;
+$('#saveAi').addEventListener('click',()=>{ cfg.apiKey=$('#apiKey').value.trim(); cfg.model=$('#apiModel').value; saveCfg(); aiBanner(); $('#aiPanel').style.display='none'; toast(cfg.apiKey?'AI connected':'Key cleared'); });
+$('#clearAi').addEventListener('click',()=>{ cfg.apiKey=''; $('#apiKey').value=''; saveCfg(); aiBanner(); toast('Key cleared'); });
+$('#analyzeBtn').addEventListener('click',runAnalyze);
+$('#skipBtn').addEventListener('click',()=>{ if(!$('#copy').value.trim()){toast('Paste the copy first');return;} renderLibrary(); $('#step2').classList.remove('hidden'); $('#step2').scrollIntoView({behavior:'smooth'}); });
+$('#generateBtn').addEventListener('click',runGenerate);
+$('#copyAllBtn').addEventListener('click',()=>{
+  const ids=Object.keys(state.results);
+  if(!ids.length){toast('Nothing to copy yet');return;}
+  const all=ids.map(id=>{const f=FORMATS.find(x=>x.id===id);return `===== ${f.name} =====\n`+state.results[id];}).join('\n\n\n');
+  copyText(all);
+});
+$('#pmCopy').addEventListener('click',()=>copyText($('#pmText').value));
+$('#pmClose').addEventListener('click',()=>$('#pm').classList.remove('show'));
+$('#pm').addEventListener('click',e=>{ if(e.target.id==='pm') $('#pm').classList.remove('show'); });
+
+/* persist copy + brand across reloads */
+try{
+  const saved=JSON.parse(localStorage.getItem('reiter_v1')||'{}');
+  if(saved.copy)$('#copy').value=saved.copy;
+  if(saved.adname)$('#adname').value=saved.adname;
+  if(saved.brand)$('#brand').value=saved.brand;
+  const persist=()=>localStorage.setItem('reiter_v1',JSON.stringify({copy:$('#copy').value,adname:$('#adname').value,brand:$('#brand').value}));
+  ['#copy','#adname','#brand'].forEach(s=>$(s).addEventListener('input',persist));
+}catch(e){}
+</script>
+</body>
+</html>
