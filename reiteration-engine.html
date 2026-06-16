@@ -113,6 +113,10 @@
   .res-body p{margin:8px 0}
   .res-body .script-block{background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 14px;white-space:pre-wrap;font-size:14px;line-height:1.6}
   .copied{color:var(--green)!important}
+  .codechip{font-family:var(--mono);background:#202329;border:1px solid var(--line);border-radius:6px;padding:2px 8px;color:var(--accent-2);font-size:13px;font-weight:700;letter-spacing:.02em}
+  .meta-block{background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 12px;margin:10px 0 4px;font-size:13px}
+  .meta-row{display:flex;gap:10px;align-items:center;margin:4px 0;flex-wrap:wrap}
+  .meta-k{min-width:72px;color:var(--muted);text-transform:uppercase;font-size:10.5px;letter-spacing:.05em;font-weight:700}
 
   .err{color:#ff9a8a;font-size:13px;margin-top:8px}
   .empty{color:var(--muted-2);font-size:13px;text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:12px}
@@ -185,6 +189,10 @@
         <div style="flex:1;min-width:200px">
           <label class="fld">Ad name / hook (optional)</label>
           <input id="adname" placeholder='e.g. "3 reasons your car is a death trap"' />
+        </div>
+        <div style="flex:1;min-width:200px">
+          <label class="fld">Codice / nomenclatura (optional)</label>
+          <input id="adcode" placeholder="e.g. TB_B2_XY" style="font-family:var(--mono)" />
         </div>
       </div>
       <div class="actions">
@@ -394,6 +402,37 @@ const FORMATS = [
    ============================================================ */
 const $ = s => document.querySelector(s);
 const state = { selected:{}, recommended:{}, results:{} };
+
+/* per-format token inserted into your nomenclature (e.g. TB_B2_XY -> TB_B2_PODCAST_XY) */
+const TOKENS = {
+  podcast_speaker:'PODCAST_SPEAKER', podcast_conversation:'PODCAST_CONVO', podcast_authority:'PODCAST_AUTHORITY',
+  cartoon_graphic:'CARTOON', whiteboard:'WHITEBOARD', stage:'STAGE', change_avatar:'AVATAR',
+  reaction_realtime:'REACTION_LIVE', bodypart_cartoon:'BODY_PART', doctor_cartoon:'DOCTOR_CARTOON',
+  pov:'POV', talking_head:'TALKING_HEAD', grwm:'GRWM', reaction_commentator:'REACTION'
+};
+/* insert the format token BEFORE the last segment (the editor initials): TB_B2_XY + PODCAST -> TB_B2_PODCAST_XY */
+function deriveCode(base, token){
+  base=(base||'').trim(); if(!base) return ''; if(!token) return base;
+  const parts=base.split('_').filter(Boolean);
+  if(parts.length<=1) return parts.concat(token).join('_');
+  const editor=parts[parts.length-1], prefix=parts.slice(0,-1);
+  return prefix.concat(token, editor).join('_');
+}
+function metaText(f, code){
+  let s=''; if(code) s+='Code: '+code+'\n';
+  s+='Format: '+f.name+(f.tier?' (tier '+f.tier+')':'');
+  if(f.example) s+='\nReference: '+f.example;
+  return s.trim();
+}
+function metaHtml(f, code){
+  const segs = f.example ? f.example.split('·').map(s=>s.trim()) : [];
+  const links = segs.map((seg,i)=>{ const m=seg.match(/https?:\/\/\S+/); return m?`<a href="${m[0]}" target="_blank" rel="noopener">reference${segs.length>1?' '+(i+1):''} ↗</a>`:''; }).filter(Boolean).join(' · ');
+  return `<div class="meta-block">
+    ${code?`<div class="meta-row"><span class="meta-k">Code</span><code class="codechip">${code}</code><button class="btn btn-ghost btn-sm" data-copycode="${code}">copy code</button></div>`:''}
+    <div class="meta-row"><span class="meta-k">Format</span><span>${f.name}${f.tier?' · tier '+f.tier:''}</span></div>
+    <div class="meta-row"><span class="meta-k">Reference</span><span>${links||'<span class="sub">—</span>'}</span></div>
+  </div>`;
+}
 
 /* AI config: works 3 ways — claude.ai (window.claude), your Anthropic API key, or copy-prompt fallback */
 const cfg = { apiKey:'', model:'claude-sonnet-4-6' };
@@ -639,10 +678,10 @@ async function runGenerate(){
   if(!copy){ toast('Paste the copy first'); return; }
   const ids=Object.keys(state.selected).filter(k=>state.selected[k]);
   if(!ids.length){ toast('Select at least one format'); return; }
-  const adname=$('#adname').value.trim(), brand=$('#brand').value;
+  const adname=$('#adname').value.trim(), brand=$('#brand').value, adcode=$('#adcode').value.trim();
 
   if(!hasAI()){
-    const big=ids.map(id=>{const f=FORMATS.find(x=>x.id===id);return `\n\n========== ${f.name} ==========\n`+buildGenPrompt(f,copy,adname,brand);}).join('');
+    const big=ids.map(id=>{const f=FORMATS.find(x=>x.id===id); const code=deriveCode(adcode,TOKENS[id]); const hdr='Begin your output with exactly this block (unchanged):\n'+metaText(f,code)+'\n\n'; return `\n\n========== ${f.name}${code?' ['+code+']':''} ==========\n`+hdr+buildGenPrompt(f,copy,adname,brand);}).join('');
     openPrompt('Generation prompts ('+ids.length+' formats)', 'Run each block below in Claude/ChatGPT:\n'+big);
     return;
   }
@@ -654,8 +693,9 @@ async function runGenerate(){
   // render placeholders
   ids.forEach(id=>{
     const f=FORMATS.find(x=>x.id===id);
+    const code=deriveCode(adcode,TOKENS[id]);
     const div=document.createElement('div'); div.className='res-card'; div.id='res-'+id;
-    div.innerHTML=`<div class="res-head"><span class="card-name">${f.name}</span><span>${tagFor(f)}</span><div class="right"><span class="sub" id="st-${id}"><span class="spin" style="border-top-color:var(--accent-2);border-color:rgba(255,255,255,.2)"></span></span></div></div><div class="res-body" id="body-${id}"><div class="empty">Queued…</div></div>`;
+    div.innerHTML=`<div class="res-head"><span class="card-name">${f.name}</span>${code?`<code class="codechip">${code}</code>`:''}<span>${tagFor(f)}</span><div class="right"><span class="sub" id="st-${id}"><span class="spin" style="border-top-color:var(--accent-2);border-color:rgba(255,255,255,.2)"></span></span></div></div><div class="res-body" id="body-${id}"><div class="empty">Queued…</div></div>`;
     res.appendChild(div);
   });
 
@@ -664,13 +704,14 @@ async function runGenerate(){
     const f=FORMATS.find(x=>x.id===id);
     const body=$('#body-'+id), st=$('#st-'+id);
     body.innerHTML=`<div class="empty"><span class="spin" style="display:inline-block;vertical-align:middle;border-top-color:var(--accent-2);border-color:rgba(255,255,255,.2)"></span> Generating…</div>`;
+    const code=deriveCode(adcode,TOKENS[id]);
     try{
       const out=await aiComplete(buildGenPrompt(f,copy,adname,brand), 8000);
-      state.results[id]=out;
-      body.innerHTML=mdToHtml(out);
-      // style the first script block
+      const full=metaText(f,code)+'\n\n'+out;
+      state.results[id]=full;
+      body.innerHTML=metaHtml(f,code)+mdToHtml(out);
       st.innerHTML=`<button class="btn btn-ghost btn-sm" data-copy="${id}">Copy</button>`;
-      st.querySelector('button').addEventListener('click',ev=>{ copyText(out); ev.target.textContent='Copied ✓'; ev.target.classList.add('copied'); setTimeout(()=>{ev.target.textContent='Copy';ev.target.classList.remove('copied');},1500); });
+      st.querySelector('button').addEventListener('click',ev=>{ copyText(full); ev.target.textContent='Copied ✓'; ev.target.classList.add('copied'); setTimeout(()=>{ev.target.textContent='Copy';ev.target.classList.remove('copied');},1500); });
     }catch(e){
       body.innerHTML=`<div class="err">AI error: ${escapeHtml(e.message||String(e))}</div>`;
       st.innerHTML='';
@@ -688,6 +729,7 @@ $('#aiCfgBtn').addEventListener('click',toggleAiPanel);
 $('#apiKey').value=cfg.apiKey; $('#apiModel').value=cfg.model;
 $('#saveAi').addEventListener('click',()=>{ cfg.apiKey=$('#apiKey').value.trim(); cfg.model=$('#apiModel').value; saveCfg(); aiBanner(); $('#aiPanel').style.display='none'; toast(cfg.apiKey?'AI connected':'Key cleared'); });
 $('#clearAi').addEventListener('click',()=>{ cfg.apiKey=''; $('#apiKey').value=''; saveCfg(); aiBanner(); toast('Key cleared'); });
+$('#results').addEventListener('click',e=>{ const el=e.target.closest('[data-copycode]'); if(el){ copyText(el.getAttribute('data-copycode')); } });
 $('#analyzeBtn').addEventListener('click',runAnalyze);
 $('#skipBtn').addEventListener('click',()=>{ if(!$('#copy').value.trim()){toast('Paste the copy first');return;} renderLibrary(); $('#step2').classList.remove('hidden'); $('#step2').scrollIntoView({behavior:'smooth'}); });
 $('#generateBtn').addEventListener('click',runGenerate);
@@ -707,8 +749,9 @@ try{
   if(saved.copy)$('#copy').value=saved.copy;
   if(saved.adname)$('#adname').value=saved.adname;
   if(saved.brand)$('#brand').value=saved.brand;
-  const persist=()=>localStorage.setItem('reiter_v1',JSON.stringify({copy:$('#copy').value,adname:$('#adname').value,brand:$('#brand').value}));
-  ['#copy','#adname','#brand'].forEach(s=>$(s).addEventListener('input',persist));
+  if(saved.adcode)$('#adcode').value=saved.adcode;
+  const persist=()=>localStorage.setItem('reiter_v1',JSON.stringify({copy:$('#copy').value,adname:$('#adname').value,brand:$('#brand').value,adcode:$('#adcode').value}));
+  ['#copy','#adname','#brand','#adcode'].forEach(s=>$(s).addEventListener('input',persist));
 }catch(e){}
 </script>
 </body>
