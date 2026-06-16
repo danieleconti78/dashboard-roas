@@ -126,7 +126,7 @@ def build_all(span_days=30):
             day = days[x["d"].isoformat()]
             day["incassato"] = round(day["incassato"] + x["inc"], 2)   # AO (anche parziale)
             day["fatturato"] = round(day["fatturato"] + x["fatt"], 2)  # R (anche firmate non saldate)
-            if x["paid"]: day["chiusure"] += 1                          # chiusura contata = pagata (AO>0)
+            day["chiusure"] += 1                                        # ogni iscrizione = una chiusura (anche firmata non saldata)
             # attribuzione canale via match contatto (email/telefono/nome), first-touch tra Meta/Google/SEO
             md = min([mfm[k] for k in x["keys"] if k in mfm], default=None)
             gmatch = [gfm[k] for k in x["keys"] if k in gfm]
@@ -141,13 +141,13 @@ def build_all(span_days=30):
             if plat:
                 day["inc_" + plat] = round(day["inc_" + plat] + x["inc"], 2)
                 day["fatt_" + plat] = round(day["fatt_" + plat] + x["fatt"], 2)
-                if x["paid"]: day["ch_" + plat] += 1
+                day["ch_" + plat] += 1
                 gg = (x["d"] - opts[plat]).days
-                if x["paid"] and 0 <= gg <= 400: incub.append({"data": x["d"].isoformat(), "gg": gg})
+                if 0 <= gg <= 400: incub.append({"data": x["d"].isoformat(), "gg": gg})
                 if plat == "google" and gtp:   # chiusura/incasso al tipo campagna Google
                     gc = day.setdefault("gcamp", {}).setdefault(gtp, {"lead": 0, "inc": 0.0, "ch": 0, "spesa": 0.0})
                     gc["inc"] = round(gc["inc"] + x["inc"], 2)
-                    if x["paid"]: gc["ch"] += 1
+                    gc["ch"] += 1
         serie = list(days.values())
         if not any(s["spesa"] or s["spesa_google"] or s["lead_meta"] or s["lead_google"] or s["incassato"] or s["fatturato"] for s in serie):
             continue
@@ -166,7 +166,7 @@ def build_all(span_days=30):
         e = noday(x["course"], x["d"].isoformat())
         e["incassato"] = round(e["incassato"] + x["inc"], 2)
         e["fatturato"] = round(e["fatturato"] + x["fatt"], 2)
-        if x["paid"]: e["chiusure"] += 1
+        e["chiusure"] += 1
     adv_names = {c["corso"] for c in corsi}
     for (cc, dd), n in calls_day.items():   # call dei corsi senza ads
         if cc not in adv_names and inwin(dd):
