@@ -4,7 +4,7 @@ import json, datetime as dt
 from collections import defaultdict
 from google.oauth2 import service_account
 from googleapiclient.discovery import build as gbuild
-from courses import match_sheet_course, city_of, presenza_course
+from courses import match_sheet_course, city_of, presenza_course, _norm
 from contacts import contact_keys
 from meta_spend import fetch_spend
 from leads import read_leads
@@ -39,26 +39,41 @@ def read_closures():
         "secrets/key.json", scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
     svc = gbuild("sheets", "v4", credentials=creds, cache_discovery=False)
     rows = svc.spreadsheets().values().get(
-        spreadsheetId=SID, range="Formazione26!A3:AU",
+        spreadsheetId=SID, range="Formazione26!A2:BZ",   # A2 = riga intestazioni
         valueRenderOption="UNFORMATTED_VALUE").execute().get("values", [])
+    if not rows:
+        return [], []
+    # risoluzione colonne PER NOME (robusta a inserimenti/spostamenti di colonne nel foglio)
+    idx = {}
+    for i, h in enumerate(rows[0]):
+        k = _norm(h)
+        if k and k not in idx:
+            idx[k] = i
+    col = lambda name: idx.get(_norm(name))
+    c_corso, c_prezzo, c_inc = col("corso"), col("prezzo"), col("incassato")   # "Incassato" 1a occ. = sez. GESTIONE SALDI
+    c_data, c_mod = col("data iscrizione"), col("modalita")
+    c_mail, c_tel, c_cog, c_nome = col("e mail"), col("cellulare"), col("cognome"), col("nome")
+    missing = [n for n, c in [("Corso", c_corso), ("PREZZO", c_prezzo), ("Incassato", c_inc), ("Data iscrizione", c_data)] if c is None]
+    if missing:
+        raise RuntimeError("Formazione26: colonne non trovate (struttura cambiata?): " + ", ".join(missing))
     out, noads = [], []
-    for r in rows:
-        g = lambda i: r[i] if len(r) > i else None
+    for r in rows[1:]:
+        g = lambda i: r[i] if (i is not None and len(r) > i) else None
         num = lambda i: float(g(i)) if isinstance(g(i), (int, float)) else 0.0
-        corso = str(g(42) or "").strip()           # AQ = GESTIONE SALDI/Corso
-        fatt, inc = num(17), num(40)                # R = PREZZO (fatturato), AO = Incassato effettivo
+        corso = str(g(c_corso) or "").strip()
+        fatt, inc = num(c_prezzo), num(c_inc)       # PREZZO = fatturato generato; Incassato = effettivo
         if not corso or (fatt <= 0 and inc <= 0):   # riga vuota / non un deal reale
             continue
-        paid = inc > 0                              # chiusura "pagata" se ha incassato; firmata-non-pagata altrimenti
+        paid = inc > 0                              # firmata-non-pagata se incassato 0
         canon = match_sheet_course(corso)
-        if canon in ("Pilates Reformer presenza", "Pilates Matwork presenza"):   # presenza -> spacca per citta (col K MODALITA')
-            city = city_of(g(10)) or city_of(corso)
+        if canon in ("Pilates Reformer presenza", "Pilates Matwork presenza"):   # presenza -> spacca per citta (MODALITA')
+            city = city_of(g(c_mod)) or city_of(corso)
             canon = presenza_course(city) if city else canon
         if canon is None:                           # corso senza ADS (solo incassi)
-            noads.append({"course": corso, "d": parse_date(g(41)), "inc": inc, "fatt": fatt, "paid": paid})
+            noads.append({"course": corso, "d": parse_date(g(c_data)), "inc": inc, "fatt": fatt, "paid": paid})
             continue
-        out.append({"course": canon, "d": parse_date(g(41)), "inc": inc, "fatt": fatt, "paid": paid,
-                    "keys": contact_keys(g(8), g(6), f"{g(1) or ''} {g(2) or ''}")})
+        out.append({"course": canon, "d": parse_date(g(c_data)), "inc": inc, "fatt": fatt, "paid": paid,
+                    "keys": contact_keys(g(c_mail), g(c_tel), f"{g(c_cog) or ''} {g(c_nome) or ''}")})
     return out, noads
 
 
