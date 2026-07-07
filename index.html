@@ -125,7 +125,7 @@ function sumCourses(list,f=from,t2=to){
   const inR=d=>d>=f&&d<=t2;
   const t={spesa:0,spesa_google:0,lead_meta:0,lead_google:0,lead_seo:0,call:0,incassato:0,fatturato:0,chiusure:0,
            inc_meta:0,inc_google:0,inc_seo:0,ch_meta:0,ch_google:0,ch_seo:0,
-           fatt_meta:0,fatt_google:0,fatt_seo:0};
+           fatt_meta:0,fatt_google:0,fatt_seo:0,lead_auto:0,risposte:0};
   for(const c of list) for(const s of c.serie) if(inR(s.data)) for(const k in t) t[k]+=(s[k]||0);
   t.spesa_meta=t.spesa;                 // serie.spesa = spesa Meta
   t.spesa=t.spesa_meta+t.spesa_google;  // SPESA TOTALE (Meta + Google) da qui in poi
@@ -144,6 +144,7 @@ function sumCourses(list,f=from,t2=to){
   t.fissaggio=t.lead?t.call/t.lead*100:null;        // % call fissate sui lead
   t.cra=t.call?t.chiusure/t.call*100:null;          // % chiusura sulle call (show-up→close)
   t.cpcall=t.call?t.spesa/t.call:null;              // costo per call fissata
+  t.risposta_pct=t.lead_auto?t.risposte/t.lead_auto*100:null;   // % risposta WhatsApp (solo lead automazione)
   t.roas_inc=t.roas_tot;                              // alias esplicito: ROAS incassato (incassato/spesa)
   t.roas_meta=t.spesa_meta?t.inc_meta/t.spesa_meta:null;
   t.roasf_meta=t.spesa_meta?t.fatt_meta/t.spesa_meta:null;     // ROAS fatturato canale Meta
@@ -221,6 +222,7 @@ function accBlock(title,color,list,key,noadsList){
       ${mc("Incassato effettivo",eur(inc),delta(inc,incP,"up"))}
       ${mc("Lead",N(t.lead)+(t.lead_google?` <small>(${N(t.lead_meta)} M · ${N(t.lead_google)} G)</small>`:""),delta(t.lead,p.lead,"up"))}
       ${mc("Call fissate",N(call)+(t.lead?` <small>${Math.round(t.call/t.lead*100)}% fiss.</small>`:""),delta(call,callP,"up"))}
+      ${mc("Risposta WhatsApp",t.risposta_pct==null?"—":pct(t.risposta_pct)+' <small>lead automazione</small>',delta(t.risposta_pct,p.risposta_pct,"up"))}
       ${mc("Costo / call",eur2(t.call?t.spesa/t.call:null),delta(t.call?t.spesa/t.call:null,p.call?p.spesa/p.call:null,"down"))}
       ${mc("Chiusure (tutte)",chi+(n.chiusure?` <small>(${t.chiusure} ads · ${n.chiusure} no ads)</small>`:""),delta(chi,chiP,"up"))}
       ${mc("CPA (costo/acquisto)",eur2(cpa),delta(cpa,cpaP,"down"))}
@@ -422,6 +424,7 @@ function renderCourse(name){
       ${mc("Lead SEO / organico",N(t.lead_seo)+' <small>da colonna corso</small>',delta(t.lead_seo,p.lead_seo,"up"))}
       ${mc("Call fissate",N(t.call),delta(t.call,p.call,"up"))}
       ${mc("% fissaggio",pct(t.fissaggio)+' <small>call/lead</small>',delta(t.fissaggio,p.fissaggio,"up"))}
+      ${mc("Risposta WhatsApp",t.risposta_pct==null?"—":pct(t.risposta_pct)+` <small>${N(t.risposte)}/${N(t.lead_auto)}</small>`,delta(t.risposta_pct,p.risposta_pct,"up"))}
       ${mc("Costo / call fissata",eur2(t.cpcall),delta(t.cpcall,p.cpcall,"down"))}
       ${mc("Chiusure",t.chiusure,delta(t.chiusure,p.chiusure,"up"))}
       ${mc("Conversione",pct(t.conversione)+' <small>chiusure/lead</small>',delta(t.conversione,p.conversione,"up"))}

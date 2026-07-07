@@ -7,7 +7,7 @@ from googleapiclient.discovery import build as gbuild
 from courses import match_sheet_course, city_of, presenza_course, _norm
 from contacts import contact_keys
 from meta_spend import fetch_spend
-from leads import read_leads
+from leads import read_leads, read_auto_funnel
 from meta_leads import fetch_lead_counts
 from site_leads import read_site
 from google_spend import read_google_spend
@@ -84,6 +84,7 @@ def build_all(span_days=30):
         spend_day[(course, dt.date.fromisoformat(date))] += s * SPEND_MULT
     closures, noads = read_closures()
     leads_day, lead_first = read_leads()               # lead Meta (+ contatti)
+    funnel_day = read_auto_funnel()                     # funnel messaggi (tab AUTO): lead_auto/contattati/risposte
     try:
         meta_lead_api = fetch_lead_counts(span_days)   # conteggio lead Meta da API (controllo congruenza foglio)
     except Exception as e:
@@ -107,7 +108,8 @@ def build_all(span_days=30):
             days[d.isoformat()] = {"data": d.isoformat(), "spesa": 0.0, "spesa_google": 0.0, "lead_meta": 0,
                                    "lead_google": 0, "lead_seo": 0, "call": 0, "incassato": 0.0, "fatturato": 0.0, "chiusure": 0,
                                    "inc_meta": 0.0, "inc_google": 0.0, "inc_seo": 0.0, "ch_meta": 0, "ch_google": 0, "ch_seo": 0,
-                                   "fatt_meta": 0.0, "fatt_google": 0.0, "fatt_seo": 0.0}
+                                   "fatt_meta": 0.0, "fatt_google": 0.0, "fatt_seo": 0.0,
+                                   "lead_auto": 0, "risposte": 0}
             d += dt.timedelta(days=1)
         for (cc, dd), v in spend_day.items():
             if cc == c and inwin(dd): days[dd.isoformat()]["spesa"] = round(v, 2)
@@ -119,6 +121,9 @@ def build_all(span_days=30):
             if cc == c and inwin(dd): days[dd.isoformat()]["lead_seo"] = n
         for (cc, dd), n in calls_day.items():
             if cc == c and inwin(dd): days[dd.isoformat()]["call"] = n
+        for (cc, dd), (na, nc, nr) in funnel_day.items():
+            if cc == c and inwin(dd):
+                days[dd.isoformat()]["lead_auto"] = na; days[dd.isoformat()]["risposte"] = nr
         # lead Google per tipo campagna (Search/PMax/Demand Gen) nelle serie
         for (cc, tp, dd), n in gtypeday.items():
             if cc == c and inwin(dd):

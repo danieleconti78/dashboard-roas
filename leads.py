@@ -134,3 +134,32 @@ if __name__ == "__main__":
     print(f"{'CORSO':28} {'LEAD TOT':>9} {'contatti uniq':>14}")
     for c, n in sorted(tot.items(), key=lambda x: -x[1]):
         print(f"{c:28} {n:>9} {len(lead_first[c]):>14}")
+
+
+def read_auto_funnel():
+    """Funnel messaggi dai tab AUTO: per (corso, giorno) -> (lead_auto, contattati, risposte).
+    Letti SENZA dedup contro i tab classici: i tab AUTO sono la fonte dello stato messaggi."""
+    svc = _svc()
+    out = defaultdict(lambda: [0, 0, 0])
+    for sid, tabs in AUTO_TABS.items():
+        for tab, course in tabs.items():
+            try:
+                rows = svc.spreadsheets().values().get(
+                    spreadsheetId=sid, range=f"{tab}!A2:K").execute().get("values", [])
+            except Exception as e:
+                print(f"  ERR {tab}: {e}")
+                continue
+            for r in rows:
+                d = _date(r[0] if r else None)
+                if d is None:
+                    continue
+                email = r[3] if len(r) > 3 else None
+                if "test@meta" in str(email or ""):
+                    continue
+                o = out[(course, d)]
+                o[0] += 1
+                if str(r[6] if len(r) > 6 else "").strip():
+                    o[1] += 1                                   # contattato dall'automazione
+                if "s" in str(r[10] if len(r) > 10 else "").strip().lower()[:2]:
+                    o[2] += 1                                   # risposta 'sì'
+    return out
