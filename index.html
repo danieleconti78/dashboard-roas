@@ -103,6 +103,7 @@
 let DATA=null, view="__ov__", from=null, to=null, ch1=null, ch2=null, ovK="roas_inc", ovDir=-1;
 let accOpen={alert:false, tot:true, cal:false, spo:false, corsi:true};   // stato tendine
 const TARGET_CPL=4;   // CPL target "tutto incluso"
+const DIPLOMA=55, TEAM_DAY=1500;   // costi: diploma per chiusura, team al giorno
 const roasMode="tot"; // overview sempre su base "totale" (il matched è solo nel dettaglio corso)
 const eur=n=>n==null?"—":"€"+Math.round(n).toLocaleString("it-IT");
 const eur2=n=>n==null?"—":"€"+n.toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -145,6 +146,7 @@ function sumCourses(list,f=from,t2=to){
   t.cra=t.call?t.chiusure/t.call*100:null;          // % chiusura sulle call (show-up→close)
   t.cpcall=t.call?t.spesa/t.call:null;              // costo per call fissata
   t.risposta_pct=t.lead_auto?t.risposte/t.lead_auto*100:null;   // % risposta WhatsApp (solo lead automazione)
+  t.margine=t.incassato-t.spesa-DIPLOMA*t.chiusure;   // margine di contribuzione (escl. team)
   t.roas_inc=t.roas_tot;                              // alias esplicito: ROAS incassato (incassato/spesa)
   t.roas_meta=t.spesa_meta?t.inc_meta/t.spesa_meta:null;
   t.roasf_meta=t.spesa_meta?t.fatt_meta/t.spesa_meta:null;     // ROAS fatturato canale Meta
@@ -211,6 +213,9 @@ function accBlock(title,color,list,key,noadsList){
   const roas=t.spesa?inc/t.spesa:null, roasP=p.spesa?incP/p.spesa:null;
   const roasF=t.spesa?fatt/t.spesa:null, roasFP=p.spesa?fattP/p.spesa:null;   // ROAS fatturato (generato dalle ads)
   const cpa=chi?t.spesa/chi:null,      cpaP=chiP?p.spesa/chiP:null;
+  const ndays=Math.round((Date.parse(to)-Date.parse(from))/864e5)+1;
+  const team=key==="tot"?TEAM_DAY*ndays:0;                      // team imputato solo sul Totale
+  const marg=inc-t.spesa-DIPLOMA*chi-team, margP=incP-p.spesa-DIPLOMA*chiP-team;
   const sum=`<span class="accsum">ROAS fatt. <span class="pill ${cls(roasF)}">${xx(roasF)}</span> · ROAS inc. <span class="pill ${cls(roas)}">${xx(roas)}</span> · ${eur(t.spesa)} spesa</span>`;
   return `<div class="acc">
     <h2 class="acch${open?"":" closed"}" onclick='toggleAcc("${key}")'>
@@ -228,6 +233,7 @@ function accBlock(title,color,list,key,noadsList){
       ${mc("CPA (costo/acquisto)",eur2(cpa),delta(cpa,cpaP,"down"))}
       ${mc("ROAS fatturato",`<span class="pill ${cls(roasF)}">${xx(roasF)}</span> <small>fatturato/spesa</small>`,delta(roasF,roasFP,"up"))}
       ${mc("ROAS incassato",`<span class="pill ${cls(roas)}">${xx(roas)}</span> <small>incassato/spesa</small>`,delta(roas,roasP,"up"))}
+      ${mc(key==="tot"?"Margine operativo":"Margine contribuzione",`<span style="color:${marg>=0?'var(--good)':'var(--bad)'}">${eur(marg)}</span> <small>${key==="tot"?`incl. team €${Math.round(TEAM_DAY*ndays/100)/10}k e diplomi`:"escl. team"}</small>`,delta(marg,margP,"up"))}
     </div>${key==="tot"?`
       <div style="margin-top:14px">
         <div class="mut" style="font-size:12px;margin-bottom:6px">Spesa vs Incassato · periodo selezionato</div>
@@ -308,20 +314,21 @@ function renderOverview(){
       <td class="corso">${c.corso}<span class="badge">${c.account}</span>${c.google_attivo?'<span class="badge">+G</span>':''}</td>
       <td>${eur(m.spesa)}</td><td>${eur2(m.cpl)}</td><td>${N(m.lead)}</td><td>${N(m.call)}</td><td>${eur2(m.cpcall)}</td>
       <td>${m.chiusure}</td><td>${eur2(m.cpa)}</td><td>${eur(m.incassato)}</td>
+      <td style="color:${m.margine>=0?'var(--good)':'var(--bad)'};font-weight:600">${eur(m.margine)}</td>
       <td><span class="pill ${cls(m.roas_fatt)}">${xx(m.roas_fatt)}</span></td>
       <td><span class="pill ${cls(m.roas_inc)}">${xx(m.roas_inc)}</span></td></tr>`;
   const th=(k,l)=>`<th data-k="${k}">${l}${ovK===k?(ovDir<0?" ▼":" ▲"):""}</th>`;
   // corsi SENZA ads (solo incassi) in fondo, separati
   const noads=(DATA.corsi_noads||[]).map(c=>{let inc=0,ch=0,ca=0;for(const s of c.serie)if(s.data>=from&&s.data<=to){inc+=s.incassato;ch+=s.chiusure;ca+=(s.call||0)}return{corso:c.corso,inc,ch,ca};})
                 .filter(x=>x.inc||x.ch||x.ca).sort((a,b)=>b.inc-a.inc);
-  const noTr=x=>`<tr style="opacity:.75"><td class="corso">${x.corso}<span class="badge">no ads</span></td><td class="mut">—</td><td class="mut">—</td><td class="mut">—</td><td>${x.ca||"—"}</td><td class="mut">—</td><td>${x.ch}</td><td class="mut">—</td><td>${eur(x.inc)}</td><td class="mut">—</td><td class="mut">—</td></tr>`;
-  const noadsBlock=noads.length?`<tr class="grp"><td colspan="11">Corsi senza ADS — solo incassi (nessuna spesa)</td></tr>`+noads.map(noTr).join(""):"";
+  const noTr=x=>`<tr style="opacity:.75"><td class="corso">${x.corso}<span class="badge">no ads</span></td><td class="mut">—</td><td class="mut">—</td><td class="mut">—</td><td>${x.ca||"—"}</td><td class="mut">—</td><td>${x.ch}</td><td class="mut">—</td><td>${eur(x.inc)}</td><td style="color:${(x.inc-DIPLOMA*x.ch)>=0?'var(--good)':'var(--bad)'}">${eur(x.inc-DIPLOMA*x.ch)}</td><td class="mut">—</td><td class="mut">—</td></tr>`;
+  const noadsBlock=noads.length?`<tr class="grp"><td colspan="12">Corsi senza ADS — solo incassi (nessuna spesa)</td></tr>`+noads.map(noTr).join(""):"";
   const openC=accOpen.corsi;
   html+=`<div class="card">
     <h2 class="acch${openC?"":" closed"}" onclick='toggleAcc("corsi")' style="text-transform:none;font-weight:700;color:var(--txt);${openC?"":"margin-bottom:0"}">
       <span class="chev">${openC?"▾":"▸"}</span>Corsi — ordinati per ROAS <span class="mut" style="font-weight:400;font-size:12px">· clicca un corso · intestazioni per riordinare</span></h2>
     ${openC?`<div class="scroll"><table id="ovt"><thead><tr>
-      ${th("corso","Corso")}${th("spesa","Spesa")}${th("cpl","CPL")}${th("lead","Lead")}${th("call","Call")}${th("cpcall","C/Call")}${th("chiusure","Chiusure")}${th("cpa","CPA")}${th("incassato","Incassato")}${th("roas_fatt","ROAS fatt.")}${th("roas_inc","ROAS inc.")}
+      ${th("corso","Corso")}${th("spesa","Spesa")}${th("cpl","CPL")}${th("lead","Lead")}${th("call","Call")}${th("cpcall","C/Call")}${th("chiusure","Chiusure")}${th("cpa","CPA")}${th("incassato","Incassato")}${th("margine","Margine")}${th("roas_fatt","ROAS fatt.")}${th("roas_inc","ROAS inc.")}
     </tr></thead><tbody>${rows.map(tr).join("")}${noadsBlock}</tbody></table></div>`:""}</div>`;
   // Business Intelligence in fondo
   html+=alertsCard();
