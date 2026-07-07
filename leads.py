@@ -23,6 +23,21 @@ TABS = {
     PRES: {"OFF_REF_PRES": "Reformer presenza Prato"},   # presenza Prato (il grosso del volume)
 }
 
+# Tab "AUTO" (automazione outbound, attivi dal 19-22/6/2026): nuova destinazione lead.
+# Schema: A=Timestamp B=Nome C=Telefono D=Email E=Corso/Form F=LeadID G=Contattato H=DataContatto
+#         I=StatoWhatsApp J=Note K=Risposta L=Follow-up M=MessageId
+# Su AIC sostituiscono i vecchi tab (fermi al 19/6); su AIS sono un feed PARALLELO (dedup per LeadID).
+AUTO_TABS = {
+    AIC: {"Osservatore_auto": "Osservatore", "Match_Analyst_auto": "Match Analyst a 11",
+          "Portieri_auto": "Portieri", "ISC_auto": "Istruttore Scuola Calcio",
+          "DS_auto": "Direttore Sportivo"},
+    AIS: {"Pilates_Mat_auto": "Pilates Matwork", "Pilates_Ref_auto": "Pilates Reformer",
+          "Mental_Coach_auto": "Mental Coach", "Istr_Running_auto": "Istruttore Running",
+          "Reformer_Milano_auto": "Reformer presenza Milano",
+          "Reformer_Prato_auto": "Reformer presenza Prato",
+          "Reformer_Torino_auto": "Reformer presenza Torino"},
+}
+
 
 def _svc():
     creds = service_account.Credentials.from_service_account_file(
@@ -50,7 +65,8 @@ def read_leads():
     svc = _svc()
     leads_day = defaultdict(int)
     lead_first = defaultdict(dict)   # course -> {chiave contatto: data lead più vecchia}
-    seen = set()                     # id lead già contati (dedup tra tab spezzati)
+    seen = set()                     # id lead già contati (dedup tra tab spezzati e vecchio<->auto)
+    nid = lambda x: str(x or "").strip().replace("l:", "")   # id normalizzato ('l:123' == '123')
     for sid, tabs in TABS.items():
         for tab, course in tabs.items():
             try:
@@ -61,7 +77,7 @@ def read_leads():
                 continue
             # A:O -> id=idx0, created_time=idx1(B), name=idx12(M), email=idx13(N), phone=idx14(O)
             for r in rows:
-                cid = r[0] if len(r) > 0 else None
+                cid = nid(r[0] if len(r) > 0 else None)
                 d = _date(r[1]) if len(r) > 1 else None
                 if d is None:        # salta header / righe senza data valida
                     continue
@@ -74,6 +90,34 @@ def read_leads():
                 phone = r[14] if len(r) > 14 else None
                 if "test@meta" in str(email or "") or "<test" in str(name or ""):
                     continue                         # scarta i lead di test di Meta
+                leads_day[(course, d)] += 1
+                fm = lead_first[course]
+                for k in contact_keys(email, phone, name):
+                    if k not in fm or d < fm[k]:
+                        fm[k] = d
+    # tab AUTO (nuova destinazione): A=Timestamp B=Nome C=Telefono D=Email F=LeadID
+    for sid, tabs in AUTO_TABS.items():
+        for tab, course in tabs.items():
+            try:
+                rows = svc.spreadsheets().values().get(
+                    spreadsheetId=sid, range=f"{tab}!A2:F").execute().get("values", [])
+            except Exception as e:
+                print(f"  ERR {tab}: {e}")
+                continue
+            for r in rows:
+                d = _date(r[0] if len(r) > 0 else None)
+                if d is None:
+                    continue
+                cid = nid(r[5] if len(r) > 5 else None)
+                if cid:
+                    if cid in seen:
+                        continue     # gia' arrivato dal tab classico (AIS = feed parallelo)
+                    seen.add(cid)
+                name = r[1] if len(r) > 1 else None
+                phone = r[2] if len(r) > 2 else None
+                email = r[3] if len(r) > 3 else None
+                if "test@meta" in str(email or "") or "<test" in str(name or ""):
+                    continue
                 leads_day[(course, d)] += 1
                 fm = lead_first[course]
                 for k in contact_keys(email, phone, name):
