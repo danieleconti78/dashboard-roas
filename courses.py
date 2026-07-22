@@ -27,6 +27,12 @@ def presenza_course(city: str):
     return f"Reformer presenza {city}"
 
 
+def is_second_level(text: str):
+    """True se e' un 2° livello (rimonetizzazione di chi ha gia' fatto il 1°), non acquisizione da ads."""
+    n = _norm(text)
+    return "2 livello" in n or "secondo livello" in n
+
+
 def city_of(text: str):
     """Estrae la citta in presenza da MODALITA'/corso (es. 'Presenza PRATO' -> 'Prato')."""
     n = _norm(text)

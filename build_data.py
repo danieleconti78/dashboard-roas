@@ -4,7 +4,7 @@ import json, datetime as dt
 from collections import defaultdict
 from google.oauth2 import service_account
 from googleapiclient.discovery import build as gbuild
-from courses import match_sheet_course, city_of, presenza_course, _norm
+from courses import match_sheet_course, city_of, presenza_course, is_second_level, _norm
 from contacts import contact_keys
 from meta_spend import fetch_spend
 from leads import read_leads, read_auto_funnel
@@ -67,6 +67,10 @@ def read_closures():
         paid = inc > 0                              # firmata-non-pagata se incassato 0
         canon = match_sheet_course(corso)
         if canon in ("Pilates Reformer presenza", "Pilates Matwork presenza"):   # presenza -> spacca per citta (MODALITA')
+            if is_second_level(corso):   # 2° livello = RIMONETIZZAZIONE (no ads): fuori dal front-end, in una riga a parte
+                noads.append({"course": "Reformer presenza 2° liv (rimonetizz.)",
+                              "d": parse_date(g(c_data)), "inc": inc, "fatt": fatt, "paid": paid})
+                continue
             city = city_of(g(c_mod)) or city_of(corso)
             canon = presenza_course(city) if city else canon
         if canon is None:                           # corso senza ADS (solo incassi)
