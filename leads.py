@@ -20,7 +20,8 @@ TABS = {
           "Pilates_Ref": "Pilates Reformer", "Istr_Running": "Istruttore Running",
           "Pres_Ref_MI": "Reformer presenza Milano",    # presenza Milano
           "Pres_Mat_TO": "Reformer presenza Torino"},   # presenza Torino
-    PRES: {"OFF_REF_PRES": "Reformer presenza Prato"},   # presenza Prato (il grosso del volume)
+    PRES: {"OFF_REF_PRES": "Reformer presenza Prato",   # presenza Prato (il grosso del volume)
+           "Preparatore_Atletico_Pugilato_lulgio": "Preparatore Atletico Pugilato"},  # nuovo corso luglio (tab classico con campagna)
 }
 
 # Tab "AUTO" (automazione outbound, attivi dal 19-22/6/2026): nuova destinazione lead.
@@ -35,7 +36,8 @@ AUTO_TABS = {
           "Mental_Coach_auto": "Mental Coach", "Istr_Running_auto": "Istruttore Running",
           "Reformer_Milano_auto": "Reformer presenza Milano",
           "Reformer_Prato_auto": "Reformer presenza Prato",
-          "Reformer_Torino_auto": "Reformer presenza Torino"},
+          "Reformer_Torino_auto": "Reformer presenza Torino",
+          "Prep_Pugilato_auto": "Preparatore Atletico Pugilato"},   # nuovo corso luglio (feed AUTO messaggi)
 }
 
 

@@ -14,6 +14,7 @@ RULES = {
         ("Match Analyst Basket",      r"\bbasket\b"),
         ("Match Analyst Pallavolo",   r"\bvolley\b"),
         ("Mental Coach",              r"\bmental\b"),
+        ("Preparatore Atletico Pugilato", r"pugil"),
         ("Istruttore Running",        r"\brunning\b"),
         ("Pilates Matwork",           r"\b(mat|matwork)\b"),       # 'mat' abbreviato o 'matwork' per esteso
         ("Pilates Reformer",          r"\b(ref|reformer)\b"),      # 'ref' abbreviato o 'reformer' per esteso
@@ -80,6 +81,7 @@ SHEET_RULES = [
     (("match", "analyst", "volley"), "Match Analyst Pallavolo"),
     (("match", "analyst", "a 11"),   "Match Analyst a 11"),
     (("mental",),                    "Mental Coach"),
+    (("pugilato",),                  "Preparatore Atletico Pugilato"),
     (("reformer", "presenza"),       "Pilates Reformer presenza"),  # presenza PRIMA dell'online
     (("matwork", "presenza"),        "Pilates Matwork presenza"),
     (("reformer",),                  "Pilates Reformer"),   # online (+2°liv)
