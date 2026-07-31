@@ -7,6 +7,9 @@ from googleapiclient.discovery import build
 CAL = "accademiaitalianasportiva@gmail.com"
 # (regex su titolo normalizzato, corso). Ordine: specifico -> generico. "corso più probabile".
 RULES = [
+    (r"pugil", "Preparatore Atletico Pugilato"),
+    # presenza: senza citta' nel titolo non e' attribuibile a Prato/Milano/Torino -> esclusa dall'online
+    (r"(?=.*pres)(?=.*(ref|reformer|mat|pilat))", None),
     (r"\bvolley\b", "Match Analyst Pallavolo"), (r"\bbasket\b", "Match Analyst Basket"),
     (r"\bmental\b", "Mental Coach"), (r"\bfutsal\b", "Istruttore Futsal (a 5)"),
     (r"\brunn?\b|running", "Istruttore Running"),
