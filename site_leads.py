@@ -2,6 +2,7 @@
 - Lead con UTM g_ads/gads -> canale GOOGLE, corso preso dall'UTM (la campagna).
 - Lead senza UTM        -> canale SEO/ORGANICO, corso preso dalla colonna E (CORSO, primo se multipli)."""
 import datetime as dt
+import re
 from collections import defaultdict
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -52,7 +53,7 @@ def utm_course(utm):
 
 def _tipo(utm):
     if "pmax" in utm or "p-max" in utm or "p_max" in utm: return "PMax"
-    if "demand" in utm or "demgen" in utm: return "Demand Gen"
+    if "demand" in utm or "demgen" in utm or re.search(r"(^|_)dg(_|$)", utm): return "Demand Gen"
     return "Search"
 
 

@@ -26,7 +26,7 @@ def _tipo(name):
     n = name.lower()
     if "p-max" in n or "pmax" in n or "p_max" in n or "performance" in n: return "PMax"
     if "search" in n: return "Search"
-    if "demand" in n or "demgen" in n or "dem_gen" in n: return "Demand Gen"
+    if "demand" in n or "demgen" in n or "dem_gen" in n or __import__("re").search(r"(^|[ _-])dg([ _-]|$)", n): return "Demand Gen"
     return "Altro"
 
 
