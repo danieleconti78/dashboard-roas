@@ -245,6 +245,9 @@ function toggleAcc(k){ accOpen[k]=!accOpen[k]; renderOverview(); }
 // --- Notifiche / business intelligence (regole automatiche, beta) ---
 function computeAlerts(){
   const out=[];
+  // sentinella corsi/sedi nuovi: spesa che non riesco ad attribuire a nessun corso
+  if((DATA.spesa_non_attribuita||0)>300)
+    out.push({lvl:"warn",t:`<b>Spesa non attribuita</b>: ${eur(DATA.spesa_non_attribuita)} nel periodo non è collegata a nessun corso — probabile corso/sede NUOVA non ancora mappata in dashboard. Segnalalo per aggiungerla.`});
   // mediana conversione tra i corsi (con volume) per individuare anomalie
   const ms=DATA.corsi.map(c=>sumCourses([c])).filter(m=>m.lead>=50);
   const med=(arr)=>{const a=arr.filter(x=>x!=null).sort((x,y)=>x-y);return a.length?a[Math.floor(a.length/2)]:null;};
