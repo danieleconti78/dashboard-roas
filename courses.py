@@ -21,7 +21,7 @@ RULES = {
     ],
 }
 
-PRESENZA_CITIES = ("Prato", "Torino", "Milano")
+PRESENZA_CITIES = ("Prato", "Torino", "Milano", "Roma", "Riccione")
 
 
 def presenza_course(city: str):
@@ -43,6 +43,10 @@ def city_of(text: str):
         return "Torino"
     if "prato" in n:
         return "Prato"
+    if "riccione" in n:
+        return "Riccione"
+    if re.search(r"\broma\b", n):     # parola intera: no 'romano', no 'romagna'
+        return "Roma"
     return None
 
 

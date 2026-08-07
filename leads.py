@@ -37,7 +37,9 @@ AUTO_TABS = {
           "Reformer_Milano_auto": "Reformer presenza Milano",
           "Reformer_Prato_auto": "Reformer presenza Prato",
           "Reformer_Torino_auto": "Reformer presenza Torino",
-          "Prep_Pugilato_auto": "Preparatore Atletico Pugilato"},   # nuovo corso luglio (feed AUTO messaggi)
+          "Prep_Pugilato_auto": "Preparatore Atletico Pugilato",   # nuovo corso luglio (feed AUTO messaggi)
+          "Reformer_Roma_auto": "Reformer presenza Roma",           # nuove sedi agosto
+          "Reformer_Riccione_auto": "Reformer presenza Riccione"},
 }
 
 
