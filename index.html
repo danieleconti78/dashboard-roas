@@ -193,6 +193,8 @@ function render(){
     `Aggiornato al ${fmtD(DATA.aggiornato)} · intervallo ${fmtD(from)} – ${fmtD(to)}`
     + (prevOK?` · confronto vs ${fmtD(pFrom)}–${fmtD(pTo)}`:"")
     + (DATA.spesa_mult&&DATA.spesa_mult!==1?` · spesa +${Math.round((DATA.spesa_mult-1)*100)}%`:"");
+  if(to>=addD(DATA.a,-6) && (Date.parse(to)-Date.parse(from))/864e5<=13)
+    document.getElementById("updated").innerHTML+=' · <span style="color:var(--warn);font-weight:700">⏳ finestra recente: chiusure/incassato ancora in arrivo (saldi in 2-4 settimane) — giudica CPL e risposte, NON il ROAS</span>';
   if(view==="__ov__") renderOverview(); else renderCourse(view);
 }
 
