@@ -15,6 +15,7 @@ SOURCES = [
 CAMP2COURSE = [
     ("istruttore_scuola_calcio", "Istruttore Scuola Calcio"), ("scuola_calcio", "Istruttore Scuola Calcio"),
     ("match_analyst", "Match Analyst a 11"), ("analyst", "Match Analyst a 11"),
+    ("match_demand", "Match Analyst a 11"), ("match", "Match Analyst a 11"),   # campagne Demand Gen (Match_Demand_Gen*)
     ("osservatore", "Osservatore"), ("direttore", "Direttore Sportivo"), ("portieri", "Portieri"),
     # Sportiva (per quando arriva il foglio AIS)
     ("reformer", "Pilates Reformer"), ("matwork", "Pilates Matwork"), ("mental", "Mental Coach"),
