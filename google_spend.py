@@ -1,6 +1,6 @@
 """Legge la spesa Google dai fogli esportati dagli script Google Ads (tab 'spesa', 'spesa_ais').
 Parsa il nome campagna -> (corso, tipo). Ritorna gspend_day[(course,tipo,date)] = costo."""
-import datetime as dt, re
+import csv, os, datetime as dt, re
 from collections import defaultdict
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -48,11 +48,31 @@ def _date(s):
         except Exception: return None
 
 
+ARCHIVE = "google_spend_archive.csv"   # storico permanente: i fogli Google sono a finestra mobile (~90gg)
+
+
+def _load_archive():
+    """Righe storiche gia' viste (i fogli cancellano il passato): {(data, campagna): costo}."""
+    if not os.path.exists(ARCHIVE):
+        return {}
+    with open(ARCHIVE, newline="") as f:
+        return {(r["date"], r["campaign"]): float(r["cost"]) for r in csv.DictReader(f) if r.get("date")}
+
+
+def _save_archive(rows):
+    with open(ARCHIVE, "w", newline="") as f:
+        w = csv.writer(f); w.writerow(["date", "campaign", "cost"])
+        for (d, camp), cost in sorted(rows.items()):
+            w.writerow([d, camp, f"{cost:.6f}"])
+
+
 def read_google_spend():
     creds = service_account.Credentials.from_service_account_file(
         "secrets/key.json", scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
     svc = build("sheets", "v4", credentials=creds, cache_discovery=False)
     gspend = defaultdict(float); unmapped = defaultdict(float)
+    merged = _load_archive()          # parte dallo storico, i fogli sovrascrivono i giorni che contengono
+    before = len(merged)
     for sid, tab in SOURCES:
         try:
             rows = svc.spreadsheets().values().get(spreadsheetId=sid, range=f"{tab}!A2:C").execute().get("values", [])
@@ -60,10 +80,17 @@ def read_google_spend():
             print(f"  (salto {tab}: {str(e)[:60]})"); continue
         for r in rows:
             if len(r) < 3: continue
-            d = _date(r[0]); cost = _num(r[2]); course = _corso(r[1])
+            d = _date(r[0]); cost = _num(r[2])
             if d is None or not cost: continue
-            if course: gspend[(course, _tipo(r[1]), d)] += cost
-            else: unmapped[r[1]] += cost
+            merged[(d.isoformat(), r[1])] = cost      # il foglio e' la verita' per i giorni che ha
+    _save_archive(merged)
+    if len(merged) > before:
+        print(f"  (archivio spesa Google: {len(merged)} righe, +{len(merged) - before} nuove)")
+    for (ds, camp), cost in merged.items():
+        d = _date(ds); course = _corso(camp)
+        if d is None: continue
+        if course: gspend[(course, _tipo(camp), d)] += cost
+        else: unmapped[camp] += cost
     return gspend, unmapped
 
 
