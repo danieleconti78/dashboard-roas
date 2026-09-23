@@ -4,6 +4,7 @@ import csv, os, datetime as dt, re
 from collections import defaultdict
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from courses import city_of, presenza_course
 
 # fonti: (spreadsheet_id, tab). Aggiungere qui il foglio AIS quando pronto.
 SOURCES = [
@@ -20,7 +21,10 @@ CAMP2COURSE = [
     # Sportiva (per quando arriva il foglio AIS)
     ("reformer", "Pilates Reformer"), ("matwork", "Pilates Matwork"), ("mental", "Mental Coach"),
     ("running", "Istruttore Running"), ("volley", "Match Analyst Pallavolo"), ("basket", "Match Analyst Basket"),
+    ("pugil", "Preparatore Atletico Pugilato"),
 ]
+
+SOURCE_LAST = {}   # (spreadsheet_id, tab) -> ultima data presente nel foglio (per la sentinella)
 
 
 def _tipo(name):
@@ -33,6 +37,9 @@ def _tipo(name):
 
 def _corso(name):
     n = re.sub(r"[^a-z0-9]+", "_", name.lower())
+    city = city_of(n)                       # sedi in presenza: la citta' ha priorita' sull'online
+    if city and ("pres" in n or "ref" in n):
+        return presenza_course(city)
     return next((c for tok, c in CAMP2COURSE if tok in n), None)
 
 
@@ -78,11 +85,18 @@ def read_google_spend():
             rows = svc.spreadsheets().values().get(spreadsheetId=sid, range=f"{tab}!A2:C").execute().get("values", [])
         except Exception as e:
             print(f"  (salto {tab}: {str(e)[:60]})"); continue
+        last = None
         for r in rows:
             if len(r) < 3: continue
             d = _date(r[0]); cost = _num(r[2])
             if d is None or not cost: continue
             merged[(d.isoformat(), r[1])] = cost      # il foglio e' la verita' per i giorni che ha
+            last = d if last is None else max(last, d)
+        if last:
+            SOURCE_LAST[(sid, tab)] = last.isoformat()
+            giorni = (dt.date.today() - last).days
+            if 3 <= giorni <= 30:                     # fermo da poco = script rotto (oltre 30gg = campagne spente)
+                print(f"  ATTENZIONE: foglio spesa Google {tab} ({sid[-8:]}) fermo da {giorni} giorni (ultimo: {last})")
     _save_archive(merged)
     if len(merged) > before:
         print(f"  (archivio spesa Google: {len(merged)} righe, +{len(merged) - before} nuove)")

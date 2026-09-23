@@ -250,6 +250,8 @@ function toggleAcc(k){ accOpen[k]=!accOpen[k]; renderOverview(); }
 function computeAlerts(){
   const out=[];
   // sentinella corsi/sedi nuovi: spesa che non riesco ad attribuire a nessun corso
+  (DATA.google_stale||[]).forEach(g=>out.push({lvl:"bad",
+    t:`<b>Spesa Google ferma</b>: il foglio <i>${g.fonte}</i> non si aggiorna da ${g.giorni} giorni (ultimo dato ${g.ultimo}) — lo script Google Ads si e' bloccato: ROAS Google gonfiati finche' non riparte.`}));
   if((DATA.spesa_non_attribuita||0)>300)
     out.push({lvl:"warn",t:`<b>Spesa non attribuita</b>: ${eur(DATA.spesa_non_attribuita)} nel periodo non è collegata a nessun corso — probabile corso/sede NUOVA non ancora mappata in dashboard. Segnalalo per aggiungerla.`});
   // mediana conversione tra i corsi (con volume) per individuare anomalie

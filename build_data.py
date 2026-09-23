@@ -10,7 +10,7 @@ from meta_spend import fetch_spend
 from leads import read_leads, read_auto_funnel
 from meta_leads import fetch_lead_counts
 from site_leads import read_site
-from google_spend import read_google_spend
+from google_spend import read_google_spend, SOURCE_LAST
 from calendar_calls import read_calls
 
 SID = "1L_6TVhbKtguDhNxyE9GxicpZpc1dvb1Ow7rk-gM3pC4"
@@ -207,7 +207,10 @@ def build_all(span_days=30):
 
     return {"aggiornato": dmax.isoformat(), "da": dmin.isoformat(), "a": dmax.isoformat(),
             "corsi": corsi, "corsi_noads": corsi_noads, "spesa_mult": SPEND_MULT,
-            "spesa_non_attribuita": round(sum(unattr.values()) * SPEND_MULT, 2)}
+            "spesa_non_attribuita": round(sum(unattr.values()) * SPEND_MULT, 2),
+            "google_stale": [{"fonte": tab, "ultimo": last, "giorni": (dt.date.today() - dt.date.fromisoformat(last)).days}
+                             for (_sid, tab), last in SOURCE_LAST.items()
+                             if 3 <= (dt.date.today() - dt.date.fromisoformat(last)).days <= 30]}
 
 
 def encrypt_data(data, out="data.enc"):
