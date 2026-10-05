@@ -49,6 +49,34 @@ def _svc():
     return build("sheets", "v4", credentials=creds, cache_discovery=False)
 
 
+def batch_get(svc, sid, ranges, tries=5):
+    """Legge PIU' tab con UNA sola chiamata (quota Sheets: 60 letture/min) e riprova sui 429.
+    Ritorna {range_richiesto: righe}; un tab mancante non fa fallire gli altri."""
+    import time
+    for i in range(tries):
+        try:
+            res = svc.spreadsheets().values().batchGet(
+                spreadsheetId=sid, ranges=ranges).execute().get("valueRanges", [])
+            return {r: (res[j].get("values", []) if j < len(res) else []) for j, r in enumerate(ranges)}
+        except Exception as e:
+            msg = str(e)
+            if ("429" in msg or "Quota exceeded" in msg or "rateLimit" in msg) and i < tries - 1:
+                time.sleep(2 ** i * 5)      # 5s, 10s, 20s, 40s: la quota e' al minuto
+                continue
+            if i == tries - 1 or "Unable to parse range" not in msg:
+                print(f"  ERR batch {sid[-6:]}: {msg[:90]}")
+                return {r: [] for r in ranges}
+            break
+    # fallback: tab per tab (cosi' un nome sbagliato non azzera tutto il foglio)
+    out = {}
+    for r in ranges:
+        try:
+            out[r] = svc.spreadsheets().values().get(spreadsheetId=sid, range=r).execute().get("values", [])
+        except Exception as e:
+            print(f"  ERR {r}: {str(e)[:70]}"); out[r] = []
+    return out
+
+
 def _date(v):
     s = str(v).strip()
     if not s:
@@ -72,13 +100,9 @@ def read_leads():
     seen = set()                     # id lead già contati (dedup tra tab spezzati e vecchio<->auto)
     nid = lambda x: str(x or "").strip().replace("l:", "")   # id normalizzato ('l:123' == '123')
     for sid, tabs in TABS.items():
+        got = batch_get(svc, sid, [f"{t}!A:O" for t in tabs])
         for tab, course in tabs.items():
-            try:
-                rows = svc.spreadsheets().values().get(
-                    spreadsheetId=sid, range=f"{tab}!A:O").execute().get("values", [])
-            except Exception as e:
-                print(f"  ERR {tab}: {e}")
-                continue
+            rows = got.get(f"{tab}!A:O", [])
             # A:O -> id=idx0, created_time=idx1(B), name=idx12(M), email=idx13(N), phone=idx14(O)
             for r in rows:
                 cid = nid(r[0] if len(r) > 0 else None)
@@ -101,13 +125,9 @@ def read_leads():
                         fm[k] = d
     # tab AUTO (nuova destinazione): A=Timestamp B=Nome C=Telefono D=Email F=LeadID
     for sid, tabs in AUTO_TABS.items():
+        got = batch_get(svc, sid, [f"{t}!A2:F" for t in tabs])
         for tab, course in tabs.items():
-            try:
-                rows = svc.spreadsheets().values().get(
-                    spreadsheetId=sid, range=f"{tab}!A2:F").execute().get("values", [])
-            except Exception as e:
-                print(f"  ERR {tab}: {e}")
-                continue
+            rows = got.get(f"{tab}!A2:F", [])
             for r in rows:
                 d = _date(r[0] if len(r) > 0 else None)
                 if d is None:
@@ -146,13 +166,9 @@ def read_auto_funnel():
     svc = _svc()
     out = defaultdict(lambda: [0, 0, 0])
     for sid, tabs in AUTO_TABS.items():
+        got = batch_get(svc, sid, [f"{t}!A2:K" for t in tabs])
         for tab, course in tabs.items():
-            try:
-                rows = svc.spreadsheets().values().get(
-                    spreadsheetId=sid, range=f"{tab}!A2:K").execute().get("values", [])
-            except Exception as e:
-                print(f"  ERR {tab}: {e}")
-                continue
+            rows = got.get(f"{tab}!A2:K", [])
             for r in rows:
                 d = _date(r[0] if r else None)
                 if d is None:
