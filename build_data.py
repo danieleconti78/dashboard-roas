@@ -82,6 +82,22 @@ def read_closures():
     return out, noads
 
 
+REPORT_SID = "1J20A4Fh3Jzvd5WvysTVF-C6hTCndan5zFjHhCjewRLY"   # "Report Privato" (tab AIS = consolidato azienda)
+
+
+def costo_fisso_giorno():
+    """Media mensile dei costi colonne L..U escluse Q (Campagne = ads, gia' contate a parte) / 30."""
+    creds = service_account.Credentials.from_service_account_file(
+        "secrets/key.json", scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
+    svc = gbuild("sheets", "v4", credentials=creds, cache_discovery=False)
+    rows = svc.spreadsheets().values().get(spreadsheetId=REPORT_SID, range="AIS!A2:U40").execute().get("values", [])
+    num = lambda x: float(str(x).replace(".", "").replace(",", ".")) if str(x).strip() else 0.0
+    cols = [i for i in range(11, 21) if i != 16]            # L=11 .. U=20, senza Q=16
+    mesi = [sum(num(r[i]) for i in cols if i < len(r)) for r in rows
+            if r and r[0].strip() and any(str(r[i]).strip() for i in cols if i < len(r))]
+    return round(sum(mesi) / len(mesi) / 30, 2) if mesi else None
+
+
 def build_all(span_days=30):
     _, per_day, unattr = fetch_spend(span_days)
     spend_day = defaultdict(float)
@@ -206,9 +222,14 @@ def build_all(span_days=30):
                     "serie": sorted(d.values(), key=lambda s: s["data"])}
                    for name, d in no_tmp.items()]
 
+    try:
+        _cfg = costo_fisso_giorno()
+    except Exception as e:
+        print("  (Report Privato non letto:", str(e)[:70], ")"); _cfg = None
     return {"aggiornato": dmax.isoformat(), "da": dmin.isoformat(), "a": dmax.isoformat(),
             "corsi": corsi, "corsi_noads": corsi_noads, "spesa_mult": SPEND_MULT,
             "spesa_non_attribuita": round(sum(unattr.values()) * SPEND_MULT, 2),
+            "costo_fisso_giorno": _cfg,
             "google_stale": [{"fonte": tab, "ultimo": last, "giorni": (dt.date.today() - dt.date.fromisoformat(last)).days}
                              for (_sid, tab), last in SOURCE_LAST.items()
                              if 3 <= (dt.date.today() - dt.date.fromisoformat(last)).days <= 30]}

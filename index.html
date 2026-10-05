@@ -105,7 +105,7 @@
 let DATA=null, view="__ov__", from=null, to=null, ch1=null, ch2=null, ovK="roas_inc", ovDir=-1;
 let accOpen={alert:false, tot:true, cal:false, spo:false, corsi:true};   // stato tendine
 const TARGET_CPL=4;   // CPL target "tutto incluso"
-const DIPLOMA=55, TEAM_DAY=1500;   // costi: diploma per chiusura, team al giorno
+const DIPLOMA=0;   // costo diploma non piu' imputato (i costi fissi arrivano dal Report Privato)
 const roasMode="tot"; // overview sempre su base "totale" (il matched è solo nel dettaglio corso)
 const eur=n=>n==null?"—":"€"+Math.round(n).toLocaleString("it-IT");
 const eur2=n=>n==null?"—":"€"+n.toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -218,7 +218,8 @@ function accBlock(title,color,list,key,noadsList){
   const roasF=t.spesa?fatt/t.spesa:null, roasFP=p.spesa?fattP/p.spesa:null;   // ROAS fatturato (generato dalle ads)
   const cpa=chi?t.spesa/chi:null,      cpaP=chiP?p.spesa/chiP:null;
   const ndays=Math.round((Date.parse(to)-Date.parse(from))/864e5)+1;
-  const team=key==="tot"?TEAM_DAY*ndays:0;                      // team imputato solo sul Totale
+  const TEAM_DAY=DATA.costo_fisso_giorno||1500;                 // media costi L..U (no Q) del Report Privato / 30
+  const team=key==="tot"?TEAM_DAY*ndays:0;                      // costi fissi imputati solo sul Totale
   const marg=inc-t.spesa-DIPLOMA*chi-team, margP=incP-p.spesa-DIPLOMA*chiP-team;
   const sum=`<span class="accsum">ROAS fatt. <span class="pill ${cls(roasF)}">${xx(roasF)}</span> · ROAS inc. <span class="pill ${cls(roas)}">${xx(roas)}</span> · ${eur(t.spesa)} spesa</span>`;
   return `<div class="acc">
@@ -237,7 +238,7 @@ function accBlock(title,color,list,key,noadsList){
       ${mc("CPA (costo/acquisto)",eur2(cpa),delta(cpa,cpaP,"down"))}
       ${mc("ROAS fatturato",`<span class="pill ${cls(roasF)}">${xx(roasF)}</span> <small>fatturato/spesa</small>`,delta(roasF,roasFP,"up"))}
       ${mc("ROAS incassato",`<span class="pill ${cls(roas)}">${xx(roas)}</span> <small>incassato/spesa</small>`,delta(roas,roasP,"up"))}
-      ${mc(key==="tot"?"Margine operativo":"Margine contribuzione",`<span style="color:${marg>=0?'var(--good)':'var(--bad)'}">${eur(marg)}</span> <small>${key==="tot"?`incl. team €${Math.round(TEAM_DAY*ndays/100)/10}k e diplomi`:"escl. team"}</small>`,delta(marg,margP,"up"))}
+      ${mc(key==="tot"?"Margine operativo":"Margine contribuzione",`<span style="color:${marg>=0?'var(--good)':'var(--bad)'}">${eur(marg)}</span> <small>${key==="tot"?`incl. costi fissi €${Math.round(TEAM_DAY*ndays/100)/10}k (Report Privato)`:"escl. costi fissi"}</small>`,delta(marg,margP,"up"))}
     </div>${key==="tot"?`
       <div style="margin-top:14px">
         <div class="mut" style="font-size:12px;margin-bottom:6px">Spesa vs Incassato · periodo selezionato</div>
