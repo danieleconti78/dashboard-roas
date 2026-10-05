@@ -17,7 +17,8 @@ SID = "1L_6TVhbKtguDhNxyE9GxicpZpc1dvb1Ow7rk-gM3pC4"
 EPOCH = dt.date(1899, 12, 30)
 SPEND_MULT = 1.22   # +22% sulla spesa di default (es. IVA/markup): spesa trattata come 22% più alta
 ACCOUNT = {"Direttore Sportivo": "Calcio", "Istruttore Scuola Calcio": "Calcio",
-           "Portieri": "Calcio", "Osservatore": "Calcio", "Match Analyst a 11": "Calcio"}
+           "Portieri": "Calcio", "Osservatore": "Calcio", "Match Analyst a 11": "Calcio",
+           "Calcio a 5 (Futsal)": "Calcio"}
 
 
 def parse_date(v):

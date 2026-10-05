@@ -19,12 +19,16 @@ TABS = {
           "Mental_Coach": "Mental Coach", "Pilates_Mat": "Pilates Matwork",
           "Pilates_Ref": "Pilates Reformer", "Istr_Running": "Istruttore Running",
           "Pres_Ref_MI": "Reformer presenza Milano",    # presenza Milano
-          "Pres_Mat_TO": "Reformer presenza Torino"},   # presenza Torino
+          "Pres_Mat_TO": "Reformer presenza Torino",
+          "istr_tennis": "Istruttore Tennis", "Istr_Padel_2026_ok": "Istruttore Padel",
+          "istr_walking": "Istruttore Nordik e Walking", "Istr_Yoga_2026": "Istruttore Yoga"},   # presenza Torino
     PRES: {"OFF_REF_PRES": "Reformer presenza Prato",   # presenza Prato (il grosso del volume)
            "Preparatore_Atletico_Pugilato_lulgio": "Preparatore Atletico Pugilato",
            "massaggio_sport_1": "Massaggio Sportivo",
            "Pilates_Chair_1": "Pilates Chair",
-           "Istruttore_attività_ludico_motorie_1": "Istruttore Attivita Ludico Motorie"},  # nuovo corso luglio (tab classico con campagna)
+           "Istruttore_attività_ludico_motorie_1": "Istruttore Attivita Ludico Motorie",
+           "Istr_Tennis_2026": "Istruttore Tennis", "Istr_Padel_2026": "Istruttore Padel",
+           "Istr_Padel_2026_ok": "Istruttore Padel", "Istr_Yoga_2026": "Istruttore Yoga"},  # nuovo corso luglio (tab classico con campagna)
 }
 
 # Tab "AUTO" (automazione outbound, attivi dal 19-22/6/2026): nuova destinazione lead.

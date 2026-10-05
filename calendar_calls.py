@@ -13,7 +13,7 @@ RULES = [
     # presenza: senza citta' nel titolo non e' attribuibile a Prato/Milano/Torino -> esclusa dall'online
     (r"(?=.*pres)(?=.*(ref|reformer|mat|pilat))", None),
     (r"\bvolley\b", "Match Analyst Pallavolo"), (r"\bbasket\b", "Match Analyst Basket"),
-    (r"\bmental\b", "Mental Coach"), (r"\bfutsal\b", "Istruttore Futsal (a 5)"),
+    (r"\bmental\b", "Mental Coach"), (r"\bfutsal\b", "Calcio a 5 (Futsal)"),
     (r"\brunn?\b|running", "Istruttore Running"),
     (r"\bref\b|reformer", "Pilates Reformer"), (r"\bpilates\b|matwork|\bmat\b", "Pilates Matwork"),
     (r"\bpersonal\b", "Personal Trainer"),

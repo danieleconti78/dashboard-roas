@@ -4,6 +4,7 @@ import re, unicodedata
 # (corso_canonico, regex sul nome NORMALIZZATO). Ordine = priorità (prima la più specifica).
 RULES = {
     "CALCIO": [
+        ("Calcio a 5 (Futsal)",       r"\b(c5|c7|futsal)\b|calcio a 5"),
         ("Direttore Sportivo",        r"\b(ds|direttore)\b"),
         ("Istruttore Scuola Calcio",  r"\b(isc|istruttore)\b"),
         ("Portieri",                  r"\bportieri\b"),
@@ -19,6 +20,10 @@ RULES = {
         ("Massaggio Sportivo",        r"massag"),
         ("Pilates Cadillac",          r"cadillac"),
         ("Pilates Chair",             r"\bchair\b"),
+        ("Istruttore Tennis",         r"\btennis\b"),
+        ("Istruttore Padel",          r"\bpadel\b"),
+        ("Istruttore Nordik e Walking", r"walking|nordi[ck]"),
+        ("Istruttore Yoga",           r"\byoga\b"),
         ("Istruttore Running",        r"\brunning\b"),
         ("Pilates Matwork",           r"\b(mat|matwork)\b"),       # 'mat' abbreviato o 'matwork' per esteso
         ("Pilates Reformer",          r"\b(ref|reformer)\b"),      # 'ref' abbreviato o 'reformer' per esteso
@@ -94,6 +99,12 @@ SHEET_RULES = [
     (("massaggio",),                 "Massaggio Sportivo"),
     (("cadillac",),                  "Pilates Cadillac"),
     (("chair",),                     "Pilates Chair"),
+    (("tennis",),                    "Istruttore Tennis"),
+    (("padel",),                     "Istruttore Padel"),
+    (("walking",),                   "Istruttore Nordik e Walking"),
+    (("yoga",),                      "Istruttore Yoga"),
+    (("futsal",),                    "Calcio a 5 (Futsal)"),
+    (("portieri a 5",),              "Calcio a 5 (Futsal)"),
     (("reformer", "presenza"),       "Pilates Reformer presenza"),  # presenza PRIMA dell'online
     (("matwork", "presenza"),        "Pilates Matwork presenza"),
     (("reformer",),                  "Pilates Reformer"),   # online (+2°liv)
