@@ -21,7 +21,10 @@ TABS = {
           "Pres_Ref_MI": "Reformer presenza Milano",    # presenza Milano
           "Pres_Mat_TO": "Reformer presenza Torino"},   # presenza Torino
     PRES: {"OFF_REF_PRES": "Reformer presenza Prato",   # presenza Prato (il grosso del volume)
-           "Preparatore_Atletico_Pugilato_lulgio": "Preparatore Atletico Pugilato"},  # nuovo corso luglio (tab classico con campagna)
+           "Preparatore_Atletico_Pugilato_lulgio": "Preparatore Atletico Pugilato",
+           "massaggio_sport_1": "Massaggio Sportivo",
+           "Pilates_Chair_1": "Pilates Chair",
+           "Istruttore_attività_ludico_motorie_1": "Istruttore Attivita Ludico Motorie"},  # nuovo corso luglio (tab classico con campagna)
 }
 
 # Tab "AUTO" (automazione outbound, attivi dal 19-22/6/2026): nuova destinazione lead.
@@ -39,7 +42,11 @@ AUTO_TABS = {
           "Reformer_Torino_auto": "Reformer presenza Torino",
           "Prep_Pugilato_auto": "Preparatore Atletico Pugilato",   # nuovo corso luglio (feed AUTO messaggi)
           "Reformer_Roma_auto": "Reformer presenza Roma",           # nuove sedi agosto
-          "Reformer_Riccione_auto": "Reformer presenza Riccione"},
+          "Reformer_Riccione_auto": "Reformer presenza Riccione",
+          "Massaggio_Sportivo_auto": "Massaggio Sportivo",
+          "Pilates_Cadillac_auto": "Pilates Cadillac",
+          "Pilates_Chair_auto": "Pilates Chair",
+          "Ludico_Motorie_auto": "Istruttore Attivita Ludico Motorie"},
 }
 
 
