@@ -47,6 +47,7 @@ AUTO_TABS = {
           "Prep_Pugilato_auto": "Preparatore Atletico Pugilato",   # nuovo corso luglio (feed AUTO messaggi)
           "Reformer_Roma_auto": "Reformer presenza Roma",           # nuove sedi agosto
           "Reformer_Riccione_auto": "Reformer presenza Riccione",
+          "Reformer_Piacenza_auto": "Reformer presenza Piacenza",
           "Massaggio_Sportivo_auto": "Massaggio Sportivo",
           "Pilates_Cadillac_auto": "Pilates Cadillac",
           "Pilates_Chair_auto": "Pilates Chair",
@@ -58,6 +59,29 @@ def _svc():
     creds = service_account.Credentials.from_service_account_file(
         "secrets/key.json", scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
     return build("sheets", "v4", credentials=creds, cache_discovery=False)
+
+
+_AUTO_CACHE = None
+
+
+def auto_tabs(svc):
+    """AUTO_TABS + sedi presenza nuove scoperte da sole (tab 'Reformer_<Citta>_auto' sul foglio AIS)."""
+    global _AUTO_CACHE
+    if _AUTO_CACHE is not None:
+        return _AUTO_CACHE
+    import re
+    out = {sid: dict(t) for sid, t in AUTO_TABS.items()}
+    try:
+        for s in svc.spreadsheets().get(spreadsheetId=AIS).execute()["sheets"]:
+            t = s["properties"]["title"]
+            m = re.fullmatch(r"Reformer_([A-Za-z]+)_auto", t)
+            if m and t not in out[AIS]:
+                out[AIS][t] = f"Reformer presenza {m.group(1).title()}"
+                print(f"  (nuova sede presenza scoperta: {t})")
+    except Exception as e:
+        print(f"  (scoperta tab AUTO saltata: {str(e)[:60]})")
+    _AUTO_CACHE = out
+    return out
 
 
 def batch_get(svc, sid, ranges, tries=5):
@@ -135,7 +159,7 @@ def read_leads():
                     if k not in fm or d < fm[k]:
                         fm[k] = d
     # tab AUTO (nuova destinazione): A=Timestamp B=Nome C=Telefono D=Email F=LeadID
-    for sid, tabs in AUTO_TABS.items():
+    for sid, tabs in auto_tabs(svc).items():
         got = batch_get(svc, sid, [f"{t}!A2:F" for t in tabs])
         for tab, course in tabs.items():
             rows = got.get(f"{tab}!A2:F", [])
@@ -176,7 +200,7 @@ def read_auto_funnel():
     Letti SENZA dedup contro i tab classici: i tab AUTO sono la fonte dello stato messaggi."""
     svc = _svc()
     out = defaultdict(lambda: [0, 0, 0])
-    for sid, tabs in AUTO_TABS.items():
+    for sid, tabs in auto_tabs(svc).items():
         got = batch_get(svc, sid, [f"{t}!A2:K" for t in tabs])
         for tab, course in tabs.items():
             rows = got.get(f"{tab}!A2:K", [])

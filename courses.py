@@ -56,6 +56,10 @@ def city_of(text: str):
         return "Riccione"
     if re.search(r"\broma\b", n):     # parola intera: no 'romano', no 'romagna'
         return "Roma"
+    # sedi NUOVE riconosciute dal formato, senza elenco: "Citta_80km_..." (adset) o "Presenza CITTA" (segreteria)
+    m = re.match(r"([a-z]+) \d+ ?km\b", n) or re.search(r"\bpresenza ([a-z]{3,})\b", n)
+    if m and m.group(1) not in ("online", "pilates", "reformer", "matwork", "ref", "mat"):
+        return m.group(1).title()
     return None
 
 
