@@ -20,6 +20,18 @@
         border-radius:9px;padding:8px 11px;font-size:13px;font-family:inherit}
   select{font-weight:600;min-width:230px}
   .ddwrap{position:relative}
+  .qbtn{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:600}
+  .qbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .gbtn{background:var(--cal);border:none;color:#fff;border-radius:9px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700}
+  .gwrap{display:grid;grid-template-columns:250px 1fr;gap:16px}
+  .glist{max-height:640px;overflow:auto}
+  .glist label{display:flex;gap:8px;align-items:center;padding:5px 4px;font-size:13px;cursor:pointer;border-radius:6px}
+  .glist label:hover{background:var(--panel2)}
+  .glist .gh{color:var(--mut);font-size:10.5px;text-transform:uppercase;margin:10px 4px 4px}
+  .gcharts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .gcharts .card{margin:0}
+  .gbox{position:relative;height:260px}
+  @media(max-width:900px){.gwrap{grid-template-columns:1fr}.gcharts{grid-template-columns:1fr}.glist{max-height:none}}
   .datebtn{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:8px 13px;cursor:pointer;font-size:13px;font-weight:600}
   .datemenu{position:absolute;right:0;top:44px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:8px;min-width:240px;z-index:30;display:none;box-shadow:0 12px 34px rgba(0,0,0,.45)}
   .datemenu.open{display:block}
@@ -79,7 +91,10 @@
 <header>
   <div><h1>📊 Dashboard ROAS — Accademia Italiana</h1><div class="sub" id="updated"></div></div>
   <div class="controls">
+    <button class="gbtn" id="chartsBtn">📈 Grafici</button>
     <select id="nav"></select>
+    <button class="qbtn" data-p="mese">Questo mese</button>
+    <button class="qbtn" data-p="mesescorso">Mese precedente</button>
     <div class="ddwrap">
       <button id="dateBtn" class="datebtn">📅 <span id="dateLabel">Ultimi 30 giorni</span> ▾</button>
       <div id="dateMenu" class="datemenu">
@@ -87,6 +102,8 @@
         <button class="pbtn" data-p="ieri">Ieri</button>
         <button class="pbtn" data-p="7">Ultimi 7 giorni</button>
         <button class="pbtn on" data-p="30">Ultimi 30 giorni</button>
+        <button class="pbtn" data-p="mese">Questo mese</button>
+        <button class="pbtn" data-p="mesescorso">Mese precedente</button>
         <button class="pbtn" data-p="60">Ultimi 60 giorni</button>
         <button class="pbtn" data-p="90">Ultimi 90 giorni</button>
         <button class="pbtn" data-p="180">Ultimi 6 mesi</button>
@@ -198,7 +215,7 @@ function render(){
     + (DATA.spesa_mult&&DATA.spesa_mult!==1?` · spesa +${Math.round((DATA.spesa_mult-1)*100)}%`:"");
   if(to>=addD(DATA.a,-6) && (Date.parse(to)-Date.parse(from))/864e5<=13)
     document.getElementById("updated").innerHTML+=' · <span style="color:var(--warn);font-weight:700">⏳ finestra recente: chiusure/incassato ancora in arrivo (saldi in 2-4 settimane) — giudica CPL e risposte, NON il ROAS</span>';
-  if(view==="__ov__") renderOverview(); else renderCourse(view);
+  if(view==="__ov__") renderOverview(); else if(view==="__charts__") renderCharts(); else renderCourse(view);
 }
 
 function sumNoads(list,f=from,t2=to){   // corsi senza ads: incassi/fatturato/chiusure/call
@@ -231,6 +248,7 @@ function accBlock(title,color,list,key,noadsList){
       ${mc("Spesa pubblicitaria",eur(t.spesa),delta(t.spesa,p.spesa,"neutral"))}
       ${mc("Fatturato generato",eur(fatt),delta(fatt,fattP,"up"))}
       ${mc("Incassato effettivo",eur(inc),delta(inc,incP,"up"))}
+      ${mc("Costo / lead",eur2(t.cpl)+' <small>IVA 22% incl.</small>',delta(t.cpl,p.cpl,"down"))}
       ${mc("Lead",N(t.lead)+(t.lead_google?` <small>(${N(t.lead_meta)} M · ${N(t.lead_google)} G)</small>`:""),delta(t.lead,p.lead,"up"))}
       ${mc("Call fissate",N(call)+(t.lead?` <small>${Math.round(t.call/t.lead*100)}% fiss.</small>`:""),delta(call,callP,"up"))}
       ${mc("Risposta WhatsApp",t.risposta_pct==null?"—":pct(t.risposta_pct)+' <small>lead automazione</small>',delta(t.risposta_pct,p.risposta_pct,"up"))}
@@ -447,7 +465,7 @@ function renderCourse(name){
       ${mc("Chiusure",t.chiusure,delta(t.chiusure,p.chiusure,"up"))}
       ${mc("Conversione",pct(t.conversione)+' <small>chiusure/lead</small>',delta(t.conversione,p.conversione,"up"))}
       ${mc("% chiusura su call",pct(t.cra)+' <small>chiusure/call</small>',delta(t.cra,p.cra,"up"))}
-      ${mc("Costo / lead",eur2(t.cpl),delta(t.cpl,p.cpl,"down"))}
+      ${mc("Costo / lead",eur2(t.cpl)+' <small>IVA 22% incl.</small>',delta(t.cpl,p.cpl,"down"))}
       ${mc("Incubazione (mediana)",gg(incub)+(fast!=null?` <small>${Math.round(fast)}% ≤7gg</small>`:""),delta(incub,pIncub,"down"))}
       <div class="m"><div class="lab">ROAS · fatturato / incassato / matched</div>
         <div style="display:flex;gap:14px;margin-top:7px">
@@ -473,17 +491,122 @@ function drawBar(id,labels,vals){
         y:{ticks:{color:css('--mut'),callback:v=>v+"x"},grid:{color:css('--line')}}}}});
 }
 
+// ================= PAGINA GRAFICI =================
+let gCharts=[], gSel=null, gCre=null, gShowCre=true;
+const GCOL=["#4f8cff","#27c281","#f4b740","#ef5b5b","#7c5cff","#22c3d6","#ff7ab6","#a3e635","#fb923c","#94a3b8"];
+function gEntities(){
+  const all=DATA.corsi, cal=all.filter(c=>c.account==="Calcio"), spo=all.filter(c=>c.account==="Sportiva");
+  const e=[{k:"tot",n:"Totale AIC + AIS",list:all,g:"Aggregati"},{k:"aic",n:"Tutta AIC (Calcio)",list:cal,g:"Aggregati"},{k:"ais",n:"Tutta AIS (Sportiva)",list:spo,g:"Aggregati"}];
+  [["Calcio",cal],["Sportiva",spo]].forEach(([a,l])=>l.slice().sort((x,y)=>x.corso.localeCompare(y.corso))
+    .forEach(c=>e.push({k:"c:"+c.corso,n:c.corso,list:[c],g:"Corsi "+(a==="Calcio"?"AIC":"AIS")})));
+  return e;
+}
+const wkOf=d=>{const w=(new Date(d+"T00:00:00Z").getUTCDay()+6)%7;return addD(d,-w)};
+function gWeeks(){const o=[];let w=wkOf(from);while(w<=to){o.push(w);w=addD(w,7)}return o}
+function gSeries(list,ws){
+  const m={};ws.forEach(w=>m[w]={sp:0,fa:0,inc:0,ld:0,ch:0});
+  for(const c of list)for(const s of c.serie){if(s.data<from||s.data>to)continue;const o=m[wkOf(s.data)];if(!o)continue;
+    o.sp+=s.spesa+(s.spesa_google||0);o.fa+=s.fatturato;o.inc+=s.incassato;o.ld+=s.lead_meta+(s.lead_google||0);o.ch+=s.chiusure}
+  return ws.map(w=>m[w]);
+}
+function roasWin(c,a,b){let sp=0,fa=0;for(const s of c.serie)if(s.data>=a&&s.data<=b){sp+=s.spesa+(s.spesa_google||0);fa+=s.fatturato}return sp>20?fa/sp:null}
+function gSave(){try{localStorage.setItem("gsel",JSON.stringify([...gSel]))}catch(e){}}
+function renderCharts(){
+  const ents=gEntities();
+  if(!gSel){gSel=new Set(["tot"]);try{const s=JSON.parse(localStorage.getItem("gsel")||"null");if(Array.isArray(s)&&s.length)gSel=new Set(s.filter(k=>ents.some(e=>e.k===k)))}catch(e){};if(!gSel.size)gSel.add("tot")}
+  const sel=ents.filter(e=>gSel.has(e.k));
+  const corsiSel=new Set(sel.flatMap(e=>e.list.map(c=>c.corso)));
+  let grp="",list="";
+  for(const e of ents){if(e.g!==grp){grp=e.g;list+=`<div class="gh">${grp}</div>`}
+    list+=`<label><input type="checkbox" data-k="${e.k}" ${gSel.has(e.k)?"checked":""}> ${e.n}</label>`}
+  const cre=(DATA.creative||[]).filter(x=>corsiSel.has(x.c));
+  document.getElementById("main").innerHTML=`
+  <div class="card"><h2>📈 Grafici — confronto settimanale</h2>
+   <div class="note" style="margin:-6px 0 12px">Seleziona uno o più corsi/accademie per confrontarli. Settimane da lunedì, nell'intervallo date scelto in alto. Spesa sempre con IVA 22% inclusa.
+   ${cre.length?`<label style="margin-left:10px;cursor:pointer"><input type="checkbox" id="gcre" ${gShowCre?"checked":""}> mostra inserimenti creative (▲)</label>`:""}</div>
+   <div class="gwrap">
+    <div class="card glist" style="margin:0">${list}<div style="margin-top:10px"><button class="qbtn" id="gclear">Azzera selezione</button></div></div>
+    <div><div class="gcharts">
+      <div class="card"><h2>Spesa</h2><div class="gbox"><canvas id="gc0"></canvas></div></div>
+      <div class="card"><h2>Fatturato</h2><div class="gbox"><canvas id="gc1"></canvas></div></div>
+      <div class="card"><h2>ROAS fatturato</h2><div class="gbox"><canvas id="gc2"></canvas></div></div>
+      <div class="card"><h2>Costo per lead</h2><div class="gbox"><canvas id="gc3"></canvas></div></div>
+    </div></div>
+   </div></div>
+  <div class="card" id="gcrecard"></div>`;
+  document.querySelectorAll(".glist input").forEach(i=>i.onchange=()=>{i.checked?gSel.add(i.dataset.k):gSel.delete(i.dataset.k);if(!gSel.size)gSel.add("tot");gSave();renderCharts()});
+  document.getElementById("gclear").onclick=()=>{gSel=new Set(["tot"]);gSave();renderCharts()};
+  const gc=document.getElementById("gcre");if(gc)gc.onchange=()=>{gShowCre=gc.checked;renderCharts()};
+  gCharts.forEach(c=>c.destroy());gCharts=[];
+  const ws=gWeeks(), lbl=ws.map(w=>fmtD(w));
+  const ser=sel.map(e=>({e,v:gSeries(e.list,ws)}));
+  const METR=[["Spesa",o=>o.sp,eur],["Fatturato",o=>o.fa,eur],["ROAS fatturato",o=>o.sp>20?o.fa/o.sp:null,xx],["CPL",o=>o.ld?o.sp/o.ld:null,eur2]];
+  // inserimenti creative raggruppati per (entita', settimana)
+  const launches=ser.map(({e})=>{const g={};(DATA.creative||[]).forEach(x=>{if(!e.list.some(c=>c.corso===x.c)||x.s<from||x.s>to)return;
+      (g[wkOf(x.s)]=g[wkOf(x.s)]||[]).push(x)});return g});
+  METR.forEach(([name,f,fmt],i)=>{
+    const ds=ser.map(({e,v},j)=>({label:e.n,data:v.map(f),borderColor:GCOL[j%GCOL.length],backgroundColor:GCOL[j%GCOL.length],tension:.25,spanGaps:true,pointRadius:2}));
+    if(gShowCre) ser.forEach(({e,v},j)=>{const L=launches[j];if(!Object.keys(L).length)return;
+      ds.push({type:"scatter",label:"▲ creative "+e.n,_cre:L,_ws:ws,data:ws.map((w,k)=>L[w]?{x:lbl[k],y:f(v[k])??0}:null).filter(Boolean),
+        pointStyle:"triangle",pointRadius:8,pointHoverRadius:10,backgroundColor:css('--warn'),borderColor:GCOL[j%GCOL.length],borderWidth:2})});
+    gCharts.push(new Chart(document.getElementById("gc"+i),{type:"line",data:{labels:lbl,datasets:ds},options:{
+      responsive:true,maintainAspectRatio:false,interaction:{mode:"nearest",intersect:false},
+      plugins:{legend:{labels:{color:css('--mut'),boxWidth:10,filter:it=>!it.text.startsWith("▲")}},
+        tooltip:{callbacks:{label:ctx=>{const d=ctx.dataset;if(d._cre){const w=d._ws[lbl.indexOf(ctx.raw.x)];const xs=d._cre[w]||[];
+          return [`🎬 ${xs.length} creative inserite (${d.label.slice(11)}):`,...xs.slice(0,8).map(x=>"  • "+x.a+" — "+fmtD(x.s)),...(xs.length>8?["  … +"+(xs.length-8)]:[])]}
+          return `${d.label}: ${fmt(ctx.parsed.y)}`}}}},
+      scales:{x:{ticks:{color:css('--mut'),maxRotation:0,autoSkip:true}},y:{beginAtZero:true,ticks:{color:css('--mut'),callback:v=>i===2?v+"x":fmt(v)}}}}}));
+  });
+  renderCreTable(cre);
+}
+function renderCreTable(cre){
+  const box=document.getElementById("gcrecard");
+  if(!cre.length){box.innerHTML=`<h2>Creative</h2><div class="note">Nessuna creative con spesa nel periodo per la selezione.</div>`;return}
+  const byC={};DATA.corsi.forEach(c=>byC[c.corso]=c);
+  const totC={};cre.forEach(x=>{for(const w in x.w)if(w>=wkOf(from)&&w<=to)totC[x.c]=(totC[x.c]||0)+x.w[w][0]});
+  const rows=cre.map(x=>{let sp=0,ld=0;for(const w in x.w)if(w>=wkOf(from)&&w<=to){sp+=x.w[w][0];ld+=x.w[w][1]}
+    const c=byC[x.c],a=x.s,pre=roasWin(c,addD(a,-14),addD(a,-1)),post=roasWin(c,a,addD(a,13)),immat=addD(a,13)>addD(DATA.a,-14);
+    return{x,sp,ld,cpl:ld?sp/ld:null,q:totC[x.c]?sp/totC[x.c]*100:0,pre,post,immat}}).filter(r=>r.sp>0).sort((a,b)=>b.x.s.localeCompare(a.x.s)||b.sp-a.sp);
+  const fmtR=r=>{if(r.pre==null||r.post==null)return'<span class="mut">—</span>';const col=r.post>=r.pre?'var(--good)':'var(--bad)';
+    return `${xx(r.pre)} → <b style="color:${col}">${xx(r.post)}</b>${r.immat?' <span title="finestra dopo non ancora matura">⏳</span>':''}`};
+  box.innerHTML=`<h2>🎬 Creative della selezione — impatto dell'inserimento</h2>
+   <div class="note" style="margin:-6px 0 10px">Ogni riga è una creative. "ROAS corso prima → dopo" = ROAS fatturato del corso nelle 2 settimane prima dell'attivazione vs le 2 settimane dopo. ⏳ = dopo non ancora maturo. Clicca una riga per il dettaglio.</div>
+   <div class="scroll"><table><thead><tr><th>Creative</th><th>Corso</th><th>Attivata</th><th>Ultimo giorno</th><th>Spesa periodo</th><th>Lead</th><th>CPL</th><th>Quota spesa corso</th><th>ROAS corso prima → dopo</th></tr></thead><tbody>
+   ${rows.slice(0,80).map((r,i)=>`<tr data-i="${i}" ${gCre===r.x.c+"|"+r.x.a?'style="background:var(--panel2)"':""}><td class="corso">${r.x.a}</td><td>${r.x.c}</td><td>${fmtD(r.x.s)}</td><td>${fmtD(r.x.e)}</td><td>${eur(r.sp)}</td><td>${N(r.ld)}</td><td>${eur2(r.cpl)}</td><td>${pct(r.q)}</td><td>${fmtR(r)}</td></tr>`).join("")}
+   </tbody></table></div>${rows.length>80?`<div class="note">Mostrate le 80 più recenti su ${rows.length}.</div>`:""}
+   <div id="gcredet"></div>`;
+  box.querySelectorAll("tbody tr").forEach(tr=>tr.onclick=()=>{const r=rows[+tr.dataset.i];gCre=r.x.c+"|"+r.x.a;renderCreDetail(r.x,byC[r.x.c]);
+    box.querySelectorAll("tbody tr").forEach(t=>t.style.background="");tr.style.background="var(--panel2)"});
+  const keep=gCre&&rows.find(r=>r.x.c+"|"+r.x.a===gCre);if(keep)renderCreDetail(keep.x,byC[keep.x.c]);
+}
+function renderCreDetail(x,c){
+  const ws=gWeeks(),lbl=ws.map(w=>fmtD(w)),cs=gSeries([c],ws);
+  const sp=ws.map(w=>x.w[w]?x.w[w][0]:0),ld=ws.map(w=>x.w[w]?x.w[w][1]:0);
+  document.getElementById("gcredet").innerHTML=`<div class="card" style="margin-top:14px"><h2>Dettaglio: ${x.a} <span class="mut">· ${x.c} · attivata ${fmtD(x.s)}</span></h2>
+    <div class="note" style="margin:-6px 0 8px">Barre = spesa della creative a settimana; linea gialla = suo CPL; linea blu = ROAS fatturato dell'intero corso (asse destro). La linea tratteggiata segna la settimana di attivazione.</div>
+    <div class="gbox" style="height:300px"><canvas id="gcd"></canvas></div></div>`;
+  const ix=lbl.indexOf(fmtD(wkOf(x.s)));
+  const vline={id:"vl",afterDraw(ch){if(ix<0)return;const xx_=ch.scales.x.getPixelForValue(ix),a=ch.chartArea,g=ch.ctx;g.save();g.setLineDash([5,4]);g.strokeStyle=css('--warn');g.beginPath();g.moveTo(xx_,a.top);g.lineTo(xx_,a.bottom);g.stroke();g.restore()}};
+  gCharts.push(new Chart(document.getElementById("gcd"),{data:{labels:lbl,datasets:[
+    {type:"bar",label:"Spesa creative",data:sp,backgroundColor:"rgba(124,92,255,.55)",yAxisID:"y"},
+    {type:"line",label:"CPL creative",data:sp.map((s,i)=>ld[i]?s/ld[i]:null),borderColor:css('--warn'),backgroundColor:css('--warn'),yAxisID:"y",spanGaps:true,tension:.25},
+    {type:"line",label:"ROAS fatt. corso",data:cs.map(o=>o.sp>20?o.fa/o.sp:null),borderColor:"#4f8cff",backgroundColor:"#4f8cff",yAxisID:"y2",spanGaps:true,tension:.25}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:css('--mut'),boxWidth:10}}},
+      scales:{x:{ticks:{color:css('--mut'),maxRotation:0,autoSkip:true}},y:{beginAtZero:true,ticks:{color:css('--mut'),callback:v=>"€"+v},title:{display:true,text:"€",color:css('--mut')}},
+        y2:{position:"right",beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:css('--mut'),callback:v=>v+"x"}}}},plugins:[vline]}));
+}
+
 function go(v){view=v;document.getElementById("nav").value=v;render()}
 function buildNav(){
   const sel=document.getElementById("nav");const byAcc={};
   DATA.corsi.forEach(c=>{(byAcc[c.account]=byAcc[c.account]||[]).push(c.corso)});
-  let h=`<option value="__ov__">📊 Panoramica generale</option>`;
+  let h=`<option value="__ov__">📊 Panoramica generale</option><option value="__charts__">📈 Grafici</option>`;
   for(const a of Object.keys(byAcc).sort()) h+=`<optgroup label="Accademia Italiana ${a}">`+
     byAcc[a].sort().map(n=>`<option value="${n}">${n}</option>`).join("")+`</optgroup>`;
   sel.innerHTML=h; sel.onchange=()=>{view=sel.value;render()};
 }
 const dateBtn=document.getElementById("dateBtn"), dateMenu=document.getElementById("dateMenu"), dateLabel=document.getElementById("dateLabel");
-const PNAME={oggi:"Oggi",ieri:"Ieri","7":"Ultimi 7 giorni","30":"Ultimi 30 giorni",mese:"Questo mese",mesescorso:"Mese scorso","60":"Ultimi 60 giorni","90":"Ultimi 90 giorni","180":"Ultimi 6 mesi"};
+const PNAME={oggi:"Oggi",ieri:"Ieri","7":"Ultimi 7 giorni","30":"Ultimi 30 giorni",mese:"Questo mese",mesescorso:"Mese precedente","60":"Ultimi 60 giorni","90":"Ultimi 90 giorni","180":"Ultimi 6 mesi"};
 const clampF=d=>d<DATA.da?DATA.da:d;
 dateBtn.onclick=e=>{e.stopPropagation();dateMenu.classList.toggle("open")};
 document.addEventListener("click",e=>{if(!dateMenu.contains(e.target)&&e.target!==dateBtn)dateMenu.classList.remove("open")});
@@ -505,10 +628,11 @@ function applyPreset(p){
     from=clampF(`${py}-${String(pm).padStart(2,"0")}-01`); to=capT(ultimo)}
   document.getElementById("from").value=from; document.getElementById("to").value=to;
   dateLabel.textContent=PNAME[p];
-  document.querySelectorAll(".pbtn").forEach(b=>b.classList.toggle("on",b.dataset.p===p));
+  document.querySelectorAll(".pbtn,.qbtn").forEach(b=>b.classList.toggle("on",b.dataset.p===p));
   dateMenu.classList.remove("open"); render();
 }
-document.querySelectorAll(".pbtn").forEach(b=>b.onclick=()=>applyPreset(b.dataset.p));
+document.querySelectorAll(".pbtn,.qbtn").forEach(b=>b.onclick=()=>applyPreset(b.dataset.p));
+document.getElementById("chartsBtn").onclick=()=>go("__charts__");
 document.getElementById("applyCustom").onclick=()=>{
   from=document.getElementById("from").value; to=document.getElementById("to").value;
   if(from>to){const t=from;from=to;to=t;document.getElementById("from").value=from;document.getElementById("to").value=to}

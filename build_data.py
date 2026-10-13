@@ -6,7 +6,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build as gbuild
 from courses import match_sheet_course, city_of, presenza_course, is_second_level, _norm
 from contacts import contact_keys
-from meta_spend import fetch_spend
+from meta_spend import fetch_spend, PER_AD
 from leads import read_leads, read_auto_funnel
 from meta_leads import fetch_lead_counts
 from site_leads import read_site
@@ -96,6 +96,25 @@ def costo_fisso_giorno():
     mesi = [sum(num(r[i]) for i in cols if i < len(r)) for r in rows
             if r and r[0].strip() and any(str(r[i]).strip() for i in cols if i < len(r))]
     return round(sum(mesi) / len(mesi) / 30, 2) if mesi else None
+
+
+def _creative(dmin, dmax):
+    """Per ogni creative (>= 30 euro): corso, data di attivazione e serie settimanale [spesa all-in, lead]."""
+    out = []
+    for (corso, ad), days in PER_AD.items():
+        tot = sum(v[0] for v in days.values())
+        if tot * SPEND_MULT < 30:
+            continue
+        attivi = sorted(d for d, v in days.items() if v[0] > 0)
+        w = defaultdict(lambda: [0.0, 0])
+        for d, (s, l) in days.items():
+            dd = dt.date.fromisoformat(d)
+            if dmin <= dd <= dmax:
+                k = (dd - dt.timedelta(days=dd.weekday())).isoformat()
+                w[k][0] += s * SPEND_MULT; w[k][1] += l
+        out.append({"c": corso, "a": ad, "s": attivi[0], "e": attivi[-1],
+                    "w": {k: [round(v[0], 2), v[1]] for k, v in sorted(w.items())}})
+    return sorted(out, key=lambda x: x["s"])
 
 
 def build_all(span_days=30):
@@ -230,6 +249,7 @@ def build_all(span_days=30):
             "corsi": corsi, "corsi_noads": corsi_noads, "spesa_mult": SPEND_MULT,
             "spesa_non_attribuita": round(sum(unattr.values()) * SPEND_MULT, 2),
             "costo_fisso_giorno": _cfg,
+            "creative": _creative(dmin, dmax),
             "google_stale": [{"fonte": tab, "ultimo": last, "giorni": (dt.date.today() - dt.date.fromisoformat(last)).days}
                              for (_sid, tab), last in SOURCE_LAST.items()
                              if 3 <= (dt.date.today() - dt.date.fromisoformat(last)).days <= 30]}
