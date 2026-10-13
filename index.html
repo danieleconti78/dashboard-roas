@@ -509,6 +509,22 @@ function gSeries(list,ws){
     o.sp+=s.spesa+(s.spesa_google||0);o.fa+=s.fatturato;o.inc+=s.incassato;o.ld+=s.lead_meta+(s.lead_google||0);o.ch+=s.chiusure}
   return ws.map(w=>m[w]);
 }
+function spWin(c,a,b){let sp=0;for(const s of c.serie)if(s.data>=a&&s.data<=b)sp+=s.spesa+(s.spesa_google||0);return sp}
+// verdetto inserimento: spesa attendibile nelle prime 2 settimane + variazione ROAS corso (2 sett. prima vs dopo)
+function creVerdict(x,c){
+  const a=x.s,pre=roasWin(c,addD(a,-14),addD(a,-1)),post=roasWin(c,a,addD(a,13));
+  let crSp=0;for(const w in x.w)if(w>=wkOf(a)&&w<=addD(a,13))crSp+=x.w[w][0];
+  const coSp=spWin(c,a,addD(a,13)),share=coSp?crSp/coSp:0,reliable=crSp>=100&&share>=0.15;
+  const ch=(pre&&post!=null)?(post-pre)/pre:null, immat=addD(a,13)>addD(DATA.a,-14);
+  let v="y",why;
+  if(!reliable) why=`spesa non attendibile (${eur(crSp)}, ${Math.round(share*100)}% del corso)`;
+  else if(ch==null) why="ROAS non calcolabile";
+  else if(ch>=0.15){v="g";why=`ROAS +${Math.round(ch*100)}% con ${eur(crSp)} spesi (${Math.round(share*100)}% del corso)`}
+  else if(ch<=-0.15){v="r";why=`ROAS ${Math.round(ch*100)}% con ${eur(crSp)} spesi (${Math.round(share*100)}% del corso)`}
+  else why=`ROAS invariato (${ch>=0?"+":""}${Math.round(ch*100)}%)`;
+  return{v,why,pre,post,crSp,share,immat};
+}
+const VCOL={g:"#27c281",r:"#ef5b5b",y:"#f4b740"}, VTXT={g:"Positivo",r:"Negativo",y:"Neutro"};
 function roasWin(c,a,b){let sp=0,fa=0;for(const s of c.serie)if(s.data>=a&&s.data<=b){sp+=s.spesa+(s.spesa_google||0);fa+=s.fatturato}return sp>20?fa/sp:null}
 function gSave(){try{localStorage.setItem("gsel",JSON.stringify([...gSel]))}catch(e){}}
 function renderCharts(){
@@ -548,12 +564,13 @@ function renderCharts(){
     const ds=ser.map(({e,v},j)=>({label:e.n,data:v.map(f),borderColor:GCOL[j%GCOL.length],backgroundColor:GCOL[j%GCOL.length],tension:.25,spanGaps:true,pointRadius:2}));
     if(gShowCre) ser.forEach(({e,v},j)=>{const L=launches[j];if(!Object.keys(L).length)return;
       ds.push({type:"scatter",label:"▲ creative "+e.n,_cre:L,_ws:ws,data:ws.map((w,k)=>L[w]?{x:lbl[k],y:f(v[k])??0}:null).filter(Boolean),
-        pointStyle:"triangle",pointRadius:8,pointHoverRadius:10,backgroundColor:css('--warn'),borderColor:GCOL[j%GCOL.length],borderWidth:2})});
+        pointStyle:"triangle",pointRadius:8,pointHoverRadius:10,borderColor:GCOL[j%GCOL.length],borderWidth:2,
+        backgroundColor:ws.filter(w=>L[w]).map(w=>{const top=L[w].map(x=>({x,V:creVerdict(x,DATA.corsi.find(c=>c.corso===x.c))})).sort((p,q)=>q.V.crSp-p.V.crSp)[0];return VCOL[top.V.v]})})});
     gCharts.push(new Chart(document.getElementById("gc"+i),{type:"line",data:{labels:lbl,datasets:ds},options:{
       responsive:true,maintainAspectRatio:false,interaction:{mode:"nearest",intersect:false},
       plugins:{legend:{labels:{color:css('--mut'),boxWidth:10,filter:it=>!it.text.startsWith("▲")}},
         tooltip:{callbacks:{label:ctx=>{const d=ctx.dataset;if(d._cre){const w=d._ws[lbl.indexOf(ctx.raw.x)];const xs=d._cre[w]||[];
-          return [`🎬 ${xs.length} creative inserite (${d.label.slice(11)}):`,...xs.slice(0,8).map(x=>"  • "+x.a+" — "+fmtD(x.s)),...(xs.length>8?["  … +"+(xs.length-8)]:[])]}
+          return [`🎬 ${xs.length} creative inserite (${d.label.slice(11)}):`,...xs.slice(0,8).map(x=>{const V=creVerdict(x,DATA.corsi.find(c=>c.corso===x.c));return `  ${{g:"🟢",r:"🔴",y:"🟡"}[V.v]} ${x.a} — ${fmtD(x.s)} · ${V.why}`}),...(xs.length>8?["  … +"+(xs.length-8)]:[])]}
           return `${d.label}: ${fmt(ctx.parsed.y)}`}}}},
       scales:{x:{ticks:{color:css('--mut'),maxRotation:0,autoSkip:true}},y:{beginAtZero:true,ticks:{color:css('--mut'),callback:v=>i===2?v+"x":fmt(v)}}}}}));
   });
@@ -565,14 +582,14 @@ function renderCreTable(cre){
   const byC={};DATA.corsi.forEach(c=>byC[c.corso]=c);
   const totC={};cre.forEach(x=>{for(const w in x.w)if(w>=wkOf(from)&&w<=to)totC[x.c]=(totC[x.c]||0)+x.w[w][0]});
   const rows=cre.map(x=>{let sp=0,ld=0;for(const w in x.w)if(w>=wkOf(from)&&w<=to){sp+=x.w[w][0];ld+=x.w[w][1]}
-    const c=byC[x.c],a=x.s,pre=roasWin(c,addD(a,-14),addD(a,-1)),post=roasWin(c,a,addD(a,13)),immat=addD(a,13)>addD(DATA.a,-14);
-    return{x,sp,ld,cpl:ld?sp/ld:null,q:totC[x.c]?sp/totC[x.c]*100:0,pre,post,immat}}).filter(r=>r.sp>0).sort((a,b)=>b.x.s.localeCompare(a.x.s)||b.sp-a.sp);
+    const V=creVerdict(x,byC[x.c]);
+    return{x,sp,ld,cpl:ld?sp/ld:null,q:totC[x.c]?sp/totC[x.c]*100:0,pre:V.pre,post:V.post,immat:V.immat,V}}).filter(r=>r.sp>0).sort((a,b)=>b.x.s.localeCompare(a.x.s)||b.sp-a.sp);
   const fmtR=r=>{if(r.pre==null||r.post==null)return'<span class="mut">—</span>';const col=r.post>=r.pre?'var(--good)':'var(--bad)';
     return `${xx(r.pre)} → <b style="color:${col}">${xx(r.post)}</b>${r.immat?' <span title="finestra dopo non ancora matura">⏳</span>':''}`};
   box.innerHTML=`<h2>🎬 Creative della selezione — impatto dell'inserimento</h2>
-   <div class="note" style="margin:-6px 0 10px">Ogni riga è una creative. "ROAS corso prima → dopo" = ROAS fatturato del corso nelle 2 settimane prima dell'attivazione vs le 2 settimane dopo. ⏳ = dopo non ancora maturo. Clicca una riga per il dettaglio.</div>
-   <div class="scroll"><table><thead><tr><th>Creative</th><th>Corso</th><th>Attivata</th><th>Ultimo giorno</th><th>Spesa periodo</th><th>Lead</th><th>CPL</th><th>Quota spesa corso</th><th>ROAS corso prima → dopo</th></tr></thead><tbody>
-   ${rows.slice(0,80).map((r,i)=>`<tr data-i="${i}" ${gCre===r.x.c+"|"+r.x.a?'style="background:var(--panel2)"':""}><td class="corso">${r.x.a}</td><td>${r.x.c}</td><td>${fmtD(r.x.s)}</td><td>${fmtD(r.x.e)}</td><td>${eur(r.sp)}</td><td>${N(r.ld)}</td><td>${eur2(r.cpl)}</td><td>${pct(r.q)}</td><td>${fmtR(r)}</td></tr>`).join("")}
+   <div class="note" style="margin:-6px 0 10px">Ogni riga è una creative. "ROAS corso prima → dopo" = ROAS fatturato del corso nelle 2 settimane prima dell'attivazione vs le 2 settimane dopo. Impatto: <b style="color:#27c281">● Positivo</b> = spesa attendibile (≥ €100 e ≥ 15% del corso) e ROAS +15% o più · <b style="color:#ef5b5b">● Negativo</b> = spesa attendibile e ROAS −15% o più · <b style="color:#f4b740">● Neutro</b> = ROAS invariato o creative che non ha speso abbastanza. ⏳ = dopo non ancora maturo, giudizio provvisorio. Clicca una riga per il dettaglio.</div>
+   <div class="scroll"><table><thead><tr><th>Creative</th><th>Corso</th><th>Attivata</th><th>Ultimo giorno</th><th>Spesa periodo</th><th>Lead</th><th>CPL</th><th>Quota spesa corso</th><th>ROAS corso prima → dopo</th><th>Impatto</th></tr></thead><tbody>
+   ${rows.slice(0,80).map((r,i)=>`<tr data-i="${i}" ${gCre===r.x.c+"|"+r.x.a?'style="background:var(--panel2)"':""}><td class="corso">${r.x.a}</td><td>${r.x.c}</td><td>${fmtD(r.x.s)}</td><td>${fmtD(r.x.e)}</td><td>${eur(r.sp)}</td><td>${N(r.ld)}</td><td>${eur2(r.cpl)}</td><td>${pct(r.q)}</td><td>${fmtR(r)}</td><td title="${r.V.why}"><span class="pill" style="background:${VCOL[r.V.v]}22;color:${VCOL[r.V.v]}">● ${VTXT[r.V.v]}</span>${r.immat?' ⏳':''}<div class="mut" style="font-size:11px;white-space:normal;max-width:230px">${r.V.why}</div></td></tr>`).join("")}
    </tbody></table></div>${rows.length>80?`<div class="note">Mostrate le 80 più recenti su ${rows.length}.</div>`:""}
    <div id="gcredet"></div>`;
   box.querySelectorAll("tbody tr").forEach(tr=>tr.onclick=()=>{const r=rows[+tr.dataset.i];gCre=r.x.c+"|"+r.x.a;renderCreDetail(r.x,byC[r.x.c]);

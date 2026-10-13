@@ -85,7 +85,7 @@ def fetch_spend(span_days=60):
             rows, got = [], -1
             for attempt in range(6):
                 rows = get_all(f"{acc}/insights", {
-                    "fields": "ad_name,adset_name,spend,actions", "level": "ad",
+                    "fields": "ad_name,adset_name,spend", "level": "ad",
                     "time_range": _tr(s, e), "time_increment": "1", "limit": "1000"})
                 got = sum(float(r.get("spend", 0) or 0) for r in rows)
                 if expected == 0 or abs(got - expected) / expected <= 0.01:
@@ -101,10 +101,29 @@ def fetch_spend(span_days=60):
                 else:
                     per_course[(account, course)] += spend
                     per_day[(account, course, r.get("date_start"))] += spend
-                    from meta_leads import _lead_val
-                    o = PER_AD[(course, r.get("ad_name") or "?")][r.get("date_start")]
-                    o[0] += spend; o[1] += _lead_val(r.get("actions"))
+                    PER_AD[(course, r.get("ad_name") or "?")][r.get("date_start")][0] += spend
     return per_course, per_day, unattr
+
+
+PER_AD_LEADS = defaultdict(lambda: defaultdict(int))   # (corso, ad_name) -> {lunedi: lead}
+
+
+def fetch_ad_leads_weekly(span_days):
+    """Lead per creative a SETTIMANE (lun-dom): chiamata leggera separata, non bloccante."""
+    from meta_leads import _lead_val
+    until = today_it() - dt.timedelta(days=1)
+    s = until - dt.timedelta(days=span_days - 1)
+    s -= dt.timedelta(days=s.weekday())                      # parte di lunedi' -> settimane allineate
+    for account, acc in ACCOUNTS.items():
+        cur = s
+        while cur <= until:
+            e = min(cur + dt.timedelta(days=27), until)
+            for r in get_all(f"{acc}/insights", {"fields": "ad_name,adset_name,actions", "level": "ad",
+                             "time_range": _tr(cur, e), "time_increment": "7", "limit": "500"}):
+                course = match_course(account, r.get("ad_name"), r.get("adset_name"))
+                if course:
+                    PER_AD_LEADS[(course, r.get("ad_name") or "?")][r.get("date_start")] += _lead_val(r.get("actions"))
+            cur = e + dt.timedelta(days=1)
 
 
 if __name__ == "__main__":

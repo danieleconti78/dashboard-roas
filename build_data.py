@@ -6,7 +6,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build as gbuild
 from courses import match_sheet_course, city_of, presenza_course, is_second_level, _norm
 from contacts import contact_keys
-from meta_spend import fetch_spend, PER_AD
+from meta_spend import fetch_spend, PER_AD, PER_AD_LEADS, fetch_ad_leads_weekly
 from leads import read_leads, read_auto_funnel
 from meta_leads import fetch_lead_counts
 from site_leads import read_site
@@ -107,11 +107,13 @@ def _creative(dmin, dmax):
             continue
         attivi = sorted(d for d, v in days.items() if v[0] > 0)
         w = defaultdict(lambda: [0.0, 0])
-        for d, (s, l) in days.items():
+        for d, (s, _l) in days.items():
             dd = dt.date.fromisoformat(d)
             if dmin <= dd <= dmax:
                 k = (dd - dt.timedelta(days=dd.weekday())).isoformat()
-                w[k][0] += s * SPEND_MULT; w[k][1] += l
+                w[k][0] += s * SPEND_MULT
+        for k, n in PER_AD_LEADS.get((corso, ad), {}).items():
+            if k in w: w[k][1] += n
         out.append({"c": corso, "a": ad, "s": attivi[0], "e": attivi[-1],
                     "w": {k: [round(v[0], 2), v[1]] for k, v in sorted(w.items())}})
     return sorted(out, key=lambda x: x["s"])
@@ -119,6 +121,10 @@ def _creative(dmin, dmax):
 
 def build_all(span_days=30):
     _, per_day, unattr = fetch_spend(span_days)
+    try:
+        fetch_ad_leads_weekly(span_days)
+    except Exception as e:
+        print("  (lead per creative saltati:", str(e)[:80], ")")
     spend_day = defaultdict(float)
     for (_, course, date), s in per_day.items():
         spend_day[(course, dt.date.fromisoformat(date))] += s * SPEND_MULT
