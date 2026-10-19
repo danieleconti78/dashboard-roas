@@ -8,6 +8,7 @@ CAL = "accademiaitalianasportiva@gmail.com"
 # (regex su titolo normalizzato, corso). Ordine: specifico -> generico. "corso più probabile".
 RULES = [
     (r"pugil", "Preparatore Atletico Pugilato"),
+    (r"parto", "Ginnastica pre e post parto"),
     (r"ludic|motori[ao]", "Istruttore Attivita Ludico Motorie"),
     (r"cadillac", "Pilates Cadillac"), (r"\bchair\b", "Pilates Chair"),
     # presenza: senza citta' nel titolo non e' attribuibile a Prato/Milano/Torino -> esclusa dall'online

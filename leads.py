@@ -25,6 +25,7 @@ TABS = {
     PRES: {"OFF_REF_PRES": "Reformer presenza Prato",   # presenza Prato (il grosso del volume)
            "Preparatore_Atletico_Pugilato_lulgio": "Preparatore Atletico Pugilato",
            "massaggio_sport_1": "Massaggio Sportivo",
+           "Ginnastica_pre_e_post_parto_1": "Ginnastica pre e post parto",
            "Massaggio_sportivo_milano": "Massaggio presenza Milano",
            "Massaggio_sportivo_Prato": "Massaggio presenza Prato",
            "Pilates_Chair_1": "Pilates Chair",
@@ -51,6 +52,7 @@ AUTO_TABS = {
           "Reformer_Riccione_auto": "Reformer presenza Riccione",
           "Reformer_Piacenza_auto": "Reformer presenza Piacenza",
           "Massaggio_Sportivo_auto": "Massaggio Sportivo",
+          "Ginnastica_Pre_Post_Parto_auto": "Ginnastica pre e post parto",
           "Massaggio_Prato_auto": "Massaggio presenza Prato",
           "Massaggio_Milano_auto": "Massaggio presenza Milano",
           "Pilates_Cadillac_auto": "Pilates Cadillac",
