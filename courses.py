@@ -80,7 +80,10 @@ def match_course(account: str, *names: str):
     if account == "SPORTIVA":
         for n in norms:
             c = city_of(n)
-            if c:
+            # la citta' indica una sede Reformer solo se l'inserzione e' di pilates/reformer
+            # (es. "massaggio_prato_..." e' Massaggio Sportivo, non Reformer presenza Prato)
+            if c and re.search(r"\b(ref|reformer|pilates|mat|matwork|pres)\b", " ".join(norms)) \
+                    and not re.search(r"massag|ludic|pugil|mental|running|tennis|padel|yoga", " ".join(norms)):
                 return presenza_course(c)
     rules = RULES.get(account, [])
     for n in norms:
