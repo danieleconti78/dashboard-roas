@@ -19,6 +19,9 @@ RULES = {
         ("Istruttore Attivita Ludico Motorie", r"ludic|motori[ao]"),
         ("Massaggio Sportivo",        r"massag"),
         ("Ginnastica pre e post parto", r"parto"),
+        ("Ginnastica Posturale Prato",  r"postural"),
+        ("Preparazione Atletica Prato", r"prep atletic"),
+        ("Benessere Project Prato",     r"benessere"),
         ("Pilates Cadillac",          r"cadillac"),
         ("Pilates Chair",             r"\bchair\b"),
         ("Istruttore Tennis",         r"\btennis\b"),
@@ -88,7 +91,7 @@ def match_course(account: str, *names: str):
             # la citta' indica una sede Reformer solo se l'inserzione e' di pilates/reformer
             # (es. "massaggio_prato_..." e' Massaggio Sportivo, non Reformer presenza Prato)
             if c and re.search(r"\b(ref|reformer|pilates|mat|matwork|pres)\b", " ".join(norms)) \
-                    and not re.search(r"massag|ludic|pugil|mental|running|tennis|padel|yoga", " ".join(norms)):
+                    and not re.search(r"massag|ludic|pugil|mental|running|tennis|padel|yoga|postural|prep atlet|benessere|parto", " ".join(norms)):
                 return presenza_course(c)
     rules = RULES.get(account, [])
     for n in norms:
