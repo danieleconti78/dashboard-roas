@@ -77,6 +77,10 @@ def match_course(account: str, *names: str):
     Eccezione SPORTIVA: i corsi in PRESENZA (token citta su ad o adset) hanno priorita' assoluta,
     perche' l'ad puo' chiamarsi solo 'ref_pres' mentre la citta sta nell'adset (Prato_/Torino_/Mlano_)."""
     norms = [_norm(n) for n in names if n]
+    if account == "SPORTIVA" and any("massag" in n for n in norms):
+        j = " ".join(norms)
+        city = city_of(j) or ("Prato" if "toscana" in j else "Milano" if "lombardia" in j else "Torino" if "piemonte" in j else None)
+        return f"Massaggio presenza {city}" if city else "Massaggio Sportivo"
     if account == "SPORTIVA":
         for n in norms:
             c = city_of(n)

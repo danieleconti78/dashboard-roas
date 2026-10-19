@@ -74,6 +74,9 @@ def read_closures():
                 continue
             city = city_of(g(c_mod)) or city_of(corso)
             canon = presenza_course(city) if city else canon
+        if canon == "Massaggio Sportivo":          # massaggio in presenza -> per sede (MODALITA')
+            city = city_of(g(c_mod))
+            canon = f"Massaggio presenza {city}" if city else canon
         if canon is None:                           # corso senza ADS (solo incassi)
             noads.append({"course": corso, "d": parse_date(g(c_data)), "inc": inc, "fatt": fatt, "paid": paid})
             continue
