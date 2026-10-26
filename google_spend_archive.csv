@@ -372,7 +372,7 @@ date,campaign,cost
 2026-10-16,Search_Match_Analyst,18.386296
 2026-10-16,Search_Osservatore,21.325211
 2026-10-17,Search_Match_Analyst,18.088514
-2026-10-17,Search_Osservatore,28.435956
+2026-10-17,Search_Osservatore,28.355956
 2026-10-18,Search_Match_Analyst,30.759288
 2026-10-18,Search_Osservatore,28.087338
 2026-10-19,Search_Match_Analyst,44.964675
@@ -387,5 +387,7 @@ date,campaign,cost
 2026-10-23,Search_Osservatore,26.035344
 2026-10-24,Search_Match_Analyst,24.928491
 2026-10-24,Search_Osservatore,25.453203
-2026-10-25,Search_Match_Analyst,2.309182
-2026-10-25,Search_Osservatore,2.569860
+2026-10-25,Search_Match_Analyst,27.579494
+2026-10-25,Search_Osservatore,27.872098
+2026-10-26,Search_Match_Analyst,1.310000
+2026-10-26,Search_Osservatore,0.540000
