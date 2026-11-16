@@ -68,6 +68,7 @@ def _svc():
 
 
 _AUTO_CACHE = None
+SHEET_ERRORS = set()   # fogli lead non leggibili in questo build (per l'alert in dashboard)
 
 
 def auto_tabs(svc):
@@ -106,6 +107,7 @@ def batch_get(svc, sid, ranges, tries=5):
                 continue
             if i == tries - 1 or "Unable to parse range" not in msg:
                 print(f"  ERR batch {sid[-6:]}: {msg[:90]}")
+                if "404" in msg or "403" in msg: SHEET_ERRORS.add(sid)
                 return {r: [] for r in ranges}
             break
     # fallback: tab per tab (cosi' un nome sbagliato non azzera tutto il foglio)

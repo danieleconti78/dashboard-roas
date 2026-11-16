@@ -122,6 +122,12 @@ def _creative(dmin, dmax):
     return sorted(out, key=lambda x: x["s"])
 
 
+def _fogli_ko():
+    import leads
+    nomi = {leads.AIC: "AIC_Leads_2026", leads.AIS: "AIS_Leads_2026", leads.PRES: "AIS_Leads (presenza)"}
+    return sorted(nomi.get(s, s) for s in leads.SHEET_ERRORS)
+
+
 def build_all(span_days=30):
     _, per_day, unattr = fetch_spend(span_days)
     try:
@@ -258,6 +264,7 @@ def build_all(span_days=30):
             "corsi": corsi, "corsi_noads": corsi_noads, "spesa_mult": SPEND_MULT,
             "spesa_non_attribuita": round(sum(unattr.values()) * SPEND_MULT, 2),
             "costo_fisso_giorno": _cfg,
+            "fogli_lead_ko": _fogli_ko(),
             "creative": _creative(dmin, dmax),
             "google_stale": [{"fonte": tab, "ultimo": last, "giorni": (dt.date.today() - dt.date.fromisoformat(last)).days}
                              for (_sid, tab), last in SOURCE_LAST.items()
