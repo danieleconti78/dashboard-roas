@@ -10,6 +10,7 @@ RULES = {
         ("Portieri",                  r"\bportieri\b"),
         ("Osservatore",               r"\b(oss|osservatore)\b"),
         ("Match Analyst a 11",        r"\bmatch\b"),
+        ("Mental Coach",              r"\bmental\b"),
     ],
     "SPORTIVA": [
         ("Match Analyst Basket",      r"\bbasket\b"),
