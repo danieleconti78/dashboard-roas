@@ -271,6 +271,8 @@ function computeAlerts(){
   const out=[];
   // sentinella corsi/sedi nuovi: spesa che non riesco ad attribuire a nessun corso
   (DATA.fogli_lead_ko||[]).forEach(f=>out.push({lvl:"bad",t:`<b>Foglio lead non accessibile</b>: <i>${f}</i> non si apre (cancellato o non piu' condiviso con dashboard-reader@dashboard-roas.iam.gserviceaccount.com) — lead, CPL e risposte di quei corsi risultano a zero.`}));
+  (DATA.fogli_illeggibili||[]).forEach(id=>out.push({lvl:"bad",
+    t:`<b>Foglio lead non leggibile</b> (id …${id.slice(-8)}): è stato spostato, eliminato o non è più condiviso con dashboard-reader@dashboard-roas.iam.gserviceaccount.com. Lead, CPL e risposte dei corsi collegati sono INCOMPLETI finché non viene ricondiviso.`}));
   (DATA.google_stale||[]).forEach(g=>out.push({lvl:"bad",
     t:`<b>Spesa Google ferma</b>: il foglio <i>${g.fonte}</i> non si aggiorna da ${g.giorni} giorni (ultimo dato ${g.ultimo}) — lo script Google Ads si e' bloccato: ROAS Google gonfiati finche' non riparte.`}));
   if((DATA.spesa_non_attribuita||0)>300)

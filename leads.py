@@ -91,6 +91,9 @@ def auto_tabs(svc):
     return out
 
 
+SHEET_ERRORS = set()   # fogli non leggibili (permessi/eliminati) -> alert in dashboard
+
+
 def batch_get(svc, sid, ranges, tries=5):
     """Legge PIU' tab con UNA sola chiamata (quota Sheets: 60 letture/min) e riprova sui 429.
     Ritorna {range_richiesto: righe}; un tab mancante non fa fallire gli altri."""
@@ -107,6 +110,8 @@ def batch_get(svc, sid, ranges, tries=5):
                 continue
             if i == tries - 1 or "Unable to parse range" not in msg:
                 print(f"  ERR batch {sid[-6:]}: {msg[:90]}")
+                if "404" in msg or "403" in msg:
+                    SHEET_ERRORS.add(sid)
                 if "404" in msg or "403" in msg: SHEET_ERRORS.add(sid)
                 return {r: [] for r in ranges}
             break

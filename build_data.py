@@ -264,6 +264,7 @@ def build_all(span_days=30):
             "corsi": corsi, "corsi_noads": corsi_noads, "spesa_mult": SPEND_MULT,
             "spesa_non_attribuita": round(sum(unattr.values()) * SPEND_MULT, 2),
             "costo_fisso_giorno": _cfg,
+            "fogli_illeggibili": sorted(__import__("leads").SHEET_ERRORS),
             "fogli_lead_ko": _fogli_ko(),
             "creative": _creative(dmin, dmax),
             "google_stale": [{"fonte": tab, "ultimo": last, "giorni": (dt.date.today() - dt.date.fromisoformat(last)).days}
