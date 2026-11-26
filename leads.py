@@ -6,7 +6,7 @@ from googleapiclient.discovery import build
 from contacts import contact_keys
 
 AIC = "1ZQbXj_h8UPW_T00C2oYt9bLr7etzL0gteUNQ-XEIitQ"
-AIS = "1DUzQpmtEogCoJQTpcuH__aPtTxJ_ydTgzXmfP8LdDYk"
+AIS = "1TAYJAc9rPyEoOjwGTTN8CpKVOrfWa9OKbqOInNPRZnM"   # "AIS leads 2027" (sostituisce AIS_Leads_2026, eliminato il 31/10/2026)
 PRES = "1hmRAXDxwdVgU0jZGiOZCuWuWhF0QTfLnyQ0O3CA9qfs"   # foglio presenza
 
 # tab lead -> corso canonico (solo corsi pubblicizzati attivi)

@@ -9,7 +9,7 @@ from googleapiclient.discovery import build
 from contacts import contact_keys
 
 AIC = "1ZQbXj_h8UPW_T00C2oYt9bLr7etzL0gteUNQ-XEIitQ"
-AIS = "1DUzQpmtEogCoJQTpcuH__aPtTxJ_ydTgzXmfP8LdDYk"
+AIS = "1TAYJAc9rPyEoOjwGTTN8CpKVOrfWa9OKbqOInNPRZnM"
 SITES = [(AIC, "Sito AIC"), (AIS, "Sito_AIS")]
 
 # slug colonna E -> corso (per i lead SEO/organici)
