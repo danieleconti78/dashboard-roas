@@ -10,7 +10,7 @@ from contacts import contact_keys
 
 AIC = "1ZQbXj_h8UPW_T00C2oYt9bLr7etzL0gteUNQ-XEIitQ"
 AIS = "1TAYJAc9rPyEoOjwGTTN8CpKVOrfWa9OKbqOInNPRZnM"
-SITES = [(AIC, "Sito AIC"), (AIS, "Sito_AIS")]
+SITES = [(AIC, "Sito AIC")]   # AIS: vedi _read_site_ais (foglio AIS_LEADS_2027, schema AUTO + Origine_lead)
 
 # slug colonna E -> corso (per i lead SEO/organici)
 SLUG = [
@@ -97,7 +97,42 @@ def read_site():
                 fm = seofirst[course]
                 for k in keys:
                     if k not in fm or d < fm[k]: fm[k] = d
+    _read_site_ais(svc, gday, gtype, gtypeday, gfirst, seo_day, seofirst)
     return gday, gtype, gtypeday, gfirst, seo_day, seofirst
+
+
+def _read_site_ais(svc, gday, gtype, gtypeday, gfirst, seo_day, seofirst):
+    """Sito AIS sul foglio AIS_LEADS_2027: date/UTM da 'Origine_lead' (Fonte=Sito), contatti e corso da 'Sito_AIS_auto'."""
+    from leads import batch_get, AUTO_TABS
+    g = batch_get(svc, AIS, ["Origine_lead!A2:K", "Sito_AIS_auto!A2:F"])
+    auto = {}
+    for r in g.get("Sito_AIS_auto!A2:F", []):
+        if len(r) > 5 and r[5]:
+            auto[r[5].strip()] = (contact_keys(r[3] if len(r) > 3 else None, r[2] if len(r) > 2 else None, r[1]),
+                                  str(r[4]).replace("Sito AIS:", "").strip())
+    tab2course = AUTO_TABS.get(AIS, {})
+    for r in g.get("Origine_lead!A2:K", []):
+        if len(r) < 4 or r[3] != "Sito":
+            continue
+        d = _date(r[2]); lid = r[0].strip()
+        if d is None: continue
+        utm = " ".join(str(x) for x in r[6:9]).strip().lower() if len(r) > 6 else ""
+        keys, corso_cell = auto.get(lid, ([], ""))
+        if "g_ads" in utm or "google_ads" in utm or "gads" in utm:
+            course = utm_course(utm)
+            if course is None: continue
+            tp = _tipo(utm)
+            gday[(course, d)] += 1; gtype[course][tp] += 1; gtypeday[(course, tp, d)] += 1
+            fm = gfirst[course]
+            for k in keys:
+                if k not in fm or d < fm[k][0]: fm[k] = (d, tp)
+        else:
+            course = site_course(corso_cell) or tab2course.get(r[1])
+            if course is None: continue
+            seo_day[(course, d)] += 1
+            fm = seofirst[course]
+            for k in keys:
+                if k not in fm or d < fm[k]: fm[k] = d
 
 
 if __name__ == "__main__":

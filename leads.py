@@ -15,13 +15,7 @@ TABS = {
           "Match_Analyst": "Match Analyst a 11", "Direttore": "Direttore Sportivo",
           "Direttore_ott_25 (4)": "Direttore Sportivo",  # continuazione: 'Direttore' si ferma al 27/05
           "Istruttore_SC": "Istruttore Scuola Calcio"},
-    AIS: {"Match_Volley": "Match Analyst Pallavolo", "Match_Basket": "Match Analyst Basket",
-          "Mental_Coach": "Mental Coach", "Pilates_Mat": "Pilates Matwork",
-          "Pilates_Ref": "Pilates Reformer", "Istr_Running": "Istruttore Running",
-          "Pres_Ref_MI": "Reformer presenza Milano",    # presenza Milano
-          "Pres_Mat_TO": "Reformer presenza Torino",
-          "istr_tennis": "Istruttore Tennis", "Istr_Padel_2026_ok": "Istruttore Padel",
-          "istr_walking": "Istruttore Nordik e Walking", "Istr_Yoga_2026": "Istruttore Yoga"},   # presenza Torino
+    AIS: {},   # AIS_LEADS_2027 ha solo tab AUTO (i tab classici non esistono piu')
     PRES: {"OFF_REF_PRES": "Reformer presenza Prato",   # presenza Prato (il grosso del volume)
            "Preparatore_Atletico_Pugilato_lulgio": "Preparatore Atletico Pugilato",
            "massaggio_sport_1": "Massaggio Sportivo",
@@ -41,8 +35,9 @@ TABS = {
 AUTO_TABS = {
     AIC: {"Osservatore_auto": "Osservatore", "Match_Analyst_auto": "Match Analyst a 11",
           "Portieri_auto": "Portieri", "ISC_auto": "Istruttore Scuola Calcio",
-          "DS_auto": "Direttore Sportivo"},
-    AIS: {"Pilates_Mat_auto": "Pilates Matwork", "Pilates_Ref_auto": "Pilates Reformer",
+          "DS_auto": "Direttore Sportivo", "Istruttore_A5_auto": "Calcio a 5 (Futsal)"},
+    AIS: {"Match_Volley_auto": "Match Analyst Pallavolo", "Match_Basket_auto": "Match Analyst Basket",
+          "Pilates_Mat_auto": "Pilates Matwork", "Pilates_Ref_auto": "Pilates Reformer",
           "Mental_Coach_auto": "Mental Coach", "Istr_Running_auto": "Istruttore Running",
           "Reformer_Milano_auto": "Reformer presenza Milano",
           "Reformer_Prato_auto": "Reformer presenza Prato",
